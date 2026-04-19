@@ -1,20 +1,31 @@
 
-## Status
+O usuário quer transformar a `/turbo` em uma tela de upsell/paywall que destaque os planos pagos (Pro e Agência) ao invés de mostrar a busca de prospecção diretamente.
 
-The end-to-end test based on logs is **passing**:
+## Mudanças propostas
 
-- Server function `getPublicProposalFn` returns 200 with full payload (proposal token, prices, site HTML)
-- The previous "Proposta não encontrada" runtime error is no longer thrown — the handler now returns data successfully
-- Client component conditions: `isLoading` → `error || !data` → render. Since data is present and no error, the main layout (header + preview iframe + investment card + lead form) renders
+**1. Reescrever `src/routes/turbo.tsx`** como página de upgrade:
 
-No code changes are needed. The fix from the previous turn (try/catch + `.maybeSingle()` + auth-header fallback client) resolved the issue.
+- Header igual (voltar p/ Dashboard + título "Modo Turbo")
+- Hero: "Desbloqueie o Modo Turbo" com explicação curta
+- Comparativo lado-a-lado de 3 planos (reaproveitando o estilo de `/planos`):
+  - **Grátis (atual)**: 2 sites/mês, 1 busca, sem publicação — botão desabilitado "Plano atual"
+  - **Pro — R$ 89,90/mês**: 80 sites, 10 buscas Turbo, publicação, domínio próprio — destacado
+  - **Agência — R$ 299/mês** (atualizar de R$ 249): sites ilimitados, 20 buscas Turbo, tudo do Pro — badge "Melhor custo"
+- Seção "O que você ganha com o Turbo": 3-4 cards com ícones (busca em massa, filtros avançados, geração ilimitada, exportar leads)
+- CTA final: "Já tenho plano" → link p/ `/dashboard/cobranca`
+- Botões "Assinar" disparam `toast.info("Pagamentos chegam em breve")` por enquanto (sem Mercado Pago ainda)
 
-## Recommended verification (manual, by user)
+**2. Atualizar `src/routes/planos.tsx`** para refletir o novo preço da Agência (R$ 299).
 
-Since I'm in read-only mode and the user is currently viewing `/proposta/lcdsbg0hhw3cq3ae3tkc9t3u` in the preview:
+**3. Não mexer em `/dashboard/prospectar`** — continua sendo onde a busca real acontece (com limite de 1 busca/mês no plano grátis, lógica fica para depois).
 
-1. Confirm the proposal page renders with: header ("Proposta SitesAI" + WhatsApp button), site preview iframe (Dentista Luz 1), investment card (R$ 497,00 + R$ 49,00/mês), and the lead form
-2. Fill the lead form (name/email/WhatsApp), pick PIX, click "Gerar PIX" → expect a success toast
-3. Test the invalid-token path: navigate to `/proposta/invalidtoken123` → expect the "Proposta não encontrada" empty state (not a crash)
+## Detalhes técnicos
 
-If anything looks off visually, share a screenshot and I'll patch it.
+- Componentes: `Button`, `Card` (inline), ícones `lucide-react` (Zap, Check, Sparkles, Crown, Rocket)
+- Sem novas tabelas/server functions — é página estática de marketing
+- Layout responsivo: `grid md:grid-cols-3` para os planos
+- Manter dark theme do dashboard
+
+## Fora de escopo (próximas fases)
+- Integração real de pagamento (Mercado Pago/Stripe) — fica para quando o usuário aprovar
+- Lógica de feature-gating por plano nas outras telas
