@@ -9,38 +9,256 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TurboRouteImport } from './routes/turbo'
+import { Route as PlanosRouteImport } from './routes/planos'
+import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SitesIdRouteImport } from './routes/sites.$id'
+import { Route as PropostaTokenRouteImport } from './routes/proposta.$token'
+import { Route as DashboardVendasRouteImport } from './routes/dashboard.vendas'
+import { Route as DashboardSitesRouteImport } from './routes/dashboard.sites'
+import { Route as DashboardProspectarRouteImport } from './routes/dashboard.prospectar'
+import { Route as DashboardLogosRouteImport } from './routes/dashboard.logos'
+import { Route as DashboardCrmRouteImport } from './routes/dashboard.crm'
+import { Route as DashboardContaRouteImport } from './routes/dashboard.conta'
+import { Route as DashboardCobrancaRouteImport } from './routes/dashboard.cobranca'
+import { Route as DashboardCarteiraRouteImport } from './routes/dashboard.carteira'
+import { Route as DashboardAfiliadosRouteImport } from './routes/dashboard.afiliados'
 
+const TurboRoute = TurboRouteImport.update({
+  id: '/turbo',
+  path: '/turbo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlanosRoute = PlanosRouteImport.update({
+  id: '/planos',
+  path: '/planos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SitesIdRoute = SitesIdRouteImport.update({
+  id: '/sites/$id',
+  path: '/sites/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PropostaTokenRoute = PropostaTokenRouteImport.update({
+  id: '/proposta/$token',
+  path: '/proposta/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardVendasRoute = DashboardVendasRouteImport.update({
+  id: '/vendas',
+  path: '/vendas',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardSitesRoute = DashboardSitesRouteImport.update({
+  id: '/sites',
+  path: '/sites',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardProspectarRoute = DashboardProspectarRouteImport.update({
+  id: '/prospectar',
+  path: '/prospectar',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardLogosRoute = DashboardLogosRouteImport.update({
+  id: '/logos',
+  path: '/logos',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardCrmRoute = DashboardCrmRouteImport.update({
+  id: '/crm',
+  path: '/crm',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardContaRoute = DashboardContaRouteImport.update({
+  id: '/conta',
+  path: '/conta',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardCobrancaRoute = DashboardCobrancaRouteImport.update({
+  id: '/cobranca',
+  path: '/cobranca',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardCarteiraRoute = DashboardCarteiraRouteImport.update({
+  id: '/carteira',
+  path: '/carteira',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardAfiliadosRoute = DashboardAfiliadosRouteImport.update({
+  id: '/afiliados',
+  path: '/afiliados',
+  getParentRoute: () => DashboardRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/dashboard': typeof DashboardRouteWithChildren
+  '/planos': typeof PlanosRoute
+  '/turbo': typeof TurboRoute
+  '/dashboard/afiliados': typeof DashboardAfiliadosRoute
+  '/dashboard/carteira': typeof DashboardCarteiraRoute
+  '/dashboard/cobranca': typeof DashboardCobrancaRoute
+  '/dashboard/conta': typeof DashboardContaRoute
+  '/dashboard/crm': typeof DashboardCrmRoute
+  '/dashboard/logos': typeof DashboardLogosRoute
+  '/dashboard/prospectar': typeof DashboardProspectarRoute
+  '/dashboard/sites': typeof DashboardSitesRoute
+  '/dashboard/vendas': typeof DashboardVendasRoute
+  '/proposta/$token': typeof PropostaTokenRoute
+  '/sites/$id': typeof SitesIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/dashboard': typeof DashboardRouteWithChildren
+  '/planos': typeof PlanosRoute
+  '/turbo': typeof TurboRoute
+  '/dashboard/afiliados': typeof DashboardAfiliadosRoute
+  '/dashboard/carteira': typeof DashboardCarteiraRoute
+  '/dashboard/cobranca': typeof DashboardCobrancaRoute
+  '/dashboard/conta': typeof DashboardContaRoute
+  '/dashboard/crm': typeof DashboardCrmRoute
+  '/dashboard/logos': typeof DashboardLogosRoute
+  '/dashboard/prospectar': typeof DashboardProspectarRoute
+  '/dashboard/sites': typeof DashboardSitesRoute
+  '/dashboard/vendas': typeof DashboardVendasRoute
+  '/proposta/$token': typeof PropostaTokenRoute
+  '/sites/$id': typeof SitesIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/dashboard': typeof DashboardRouteWithChildren
+  '/planos': typeof PlanosRoute
+  '/turbo': typeof TurboRoute
+  '/dashboard/afiliados': typeof DashboardAfiliadosRoute
+  '/dashboard/carteira': typeof DashboardCarteiraRoute
+  '/dashboard/cobranca': typeof DashboardCobrancaRoute
+  '/dashboard/conta': typeof DashboardContaRoute
+  '/dashboard/crm': typeof DashboardCrmRoute
+  '/dashboard/logos': typeof DashboardLogosRoute
+  '/dashboard/prospectar': typeof DashboardProspectarRoute
+  '/dashboard/sites': typeof DashboardSitesRoute
+  '/dashboard/vendas': typeof DashboardVendasRoute
+  '/proposta/$token': typeof PropostaTokenRoute
+  '/sites/$id': typeof SitesIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/dashboard'
+    | '/planos'
+    | '/turbo'
+    | '/dashboard/afiliados'
+    | '/dashboard/carteira'
+    | '/dashboard/cobranca'
+    | '/dashboard/conta'
+    | '/dashboard/crm'
+    | '/dashboard/logos'
+    | '/dashboard/prospectar'
+    | '/dashboard/sites'
+    | '/dashboard/vendas'
+    | '/proposta/$token'
+    | '/sites/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/auth'
+    | '/dashboard'
+    | '/planos'
+    | '/turbo'
+    | '/dashboard/afiliados'
+    | '/dashboard/carteira'
+    | '/dashboard/cobranca'
+    | '/dashboard/conta'
+    | '/dashboard/crm'
+    | '/dashboard/logos'
+    | '/dashboard/prospectar'
+    | '/dashboard/sites'
+    | '/dashboard/vendas'
+    | '/proposta/$token'
+    | '/sites/$id'
+  id:
+    | '__root__'
+    | '/'
+    | '/auth'
+    | '/dashboard'
+    | '/planos'
+    | '/turbo'
+    | '/dashboard/afiliados'
+    | '/dashboard/carteira'
+    | '/dashboard/cobranca'
+    | '/dashboard/conta'
+    | '/dashboard/crm'
+    | '/dashboard/logos'
+    | '/dashboard/prospectar'
+    | '/dashboard/sites'
+    | '/dashboard/vendas'
+    | '/proposta/$token'
+    | '/sites/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthRoute: typeof AuthRoute
+  DashboardRoute: typeof DashboardRouteWithChildren
+  PlanosRoute: typeof PlanosRoute
+  TurboRoute: typeof TurboRoute
+  PropostaTokenRoute: typeof PropostaTokenRoute
+  SitesIdRoute: typeof SitesIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/turbo': {
+      id: '/turbo'
+      path: '/turbo'
+      fullPath: '/turbo'
+      preLoaderRoute: typeof TurboRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/planos': {
+      id: '/planos'
+      path: '/planos'
+      fullPath: '/planos'
+      preLoaderRoute: typeof PlanosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,11 +266,122 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/sites/$id': {
+      id: '/sites/$id'
+      path: '/sites/$id'
+      fullPath: '/sites/$id'
+      preLoaderRoute: typeof SitesIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/proposta/$token': {
+      id: '/proposta/$token'
+      path: '/proposta/$token'
+      fullPath: '/proposta/$token'
+      preLoaderRoute: typeof PropostaTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard/vendas': {
+      id: '/dashboard/vendas'
+      path: '/vendas'
+      fullPath: '/dashboard/vendas'
+      preLoaderRoute: typeof DashboardVendasRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/sites': {
+      id: '/dashboard/sites'
+      path: '/sites'
+      fullPath: '/dashboard/sites'
+      preLoaderRoute: typeof DashboardSitesRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/prospectar': {
+      id: '/dashboard/prospectar'
+      path: '/prospectar'
+      fullPath: '/dashboard/prospectar'
+      preLoaderRoute: typeof DashboardProspectarRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/logos': {
+      id: '/dashboard/logos'
+      path: '/logos'
+      fullPath: '/dashboard/logos'
+      preLoaderRoute: typeof DashboardLogosRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/crm': {
+      id: '/dashboard/crm'
+      path: '/crm'
+      fullPath: '/dashboard/crm'
+      preLoaderRoute: typeof DashboardCrmRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/conta': {
+      id: '/dashboard/conta'
+      path: '/conta'
+      fullPath: '/dashboard/conta'
+      preLoaderRoute: typeof DashboardContaRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/cobranca': {
+      id: '/dashboard/cobranca'
+      path: '/cobranca'
+      fullPath: '/dashboard/cobranca'
+      preLoaderRoute: typeof DashboardCobrancaRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/carteira': {
+      id: '/dashboard/carteira'
+      path: '/carteira'
+      fullPath: '/dashboard/carteira'
+      preLoaderRoute: typeof DashboardCarteiraRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/afiliados': {
+      id: '/dashboard/afiliados'
+      path: '/afiliados'
+      fullPath: '/dashboard/afiliados'
+      preLoaderRoute: typeof DashboardAfiliadosRouteImport
+      parentRoute: typeof DashboardRoute
+    }
   }
 }
 
+interface DashboardRouteChildren {
+  DashboardAfiliadosRoute: typeof DashboardAfiliadosRoute
+  DashboardCarteiraRoute: typeof DashboardCarteiraRoute
+  DashboardCobrancaRoute: typeof DashboardCobrancaRoute
+  DashboardContaRoute: typeof DashboardContaRoute
+  DashboardCrmRoute: typeof DashboardCrmRoute
+  DashboardLogosRoute: typeof DashboardLogosRoute
+  DashboardProspectarRoute: typeof DashboardProspectarRoute
+  DashboardSitesRoute: typeof DashboardSitesRoute
+  DashboardVendasRoute: typeof DashboardVendasRoute
+}
+
+const DashboardRouteChildren: DashboardRouteChildren = {
+  DashboardAfiliadosRoute: DashboardAfiliadosRoute,
+  DashboardCarteiraRoute: DashboardCarteiraRoute,
+  DashboardCobrancaRoute: DashboardCobrancaRoute,
+  DashboardContaRoute: DashboardContaRoute,
+  DashboardCrmRoute: DashboardCrmRoute,
+  DashboardLogosRoute: DashboardLogosRoute,
+  DashboardProspectarRoute: DashboardProspectarRoute,
+  DashboardSitesRoute: DashboardSitesRoute,
+  DashboardVendasRoute: DashboardVendasRoute,
+}
+
+const DashboardRouteWithChildren = DashboardRoute._addFileChildren(
+  DashboardRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthRoute: AuthRoute,
+  DashboardRoute: DashboardRouteWithChildren,
+  PlanosRoute: PlanosRoute,
+  TurboRoute: TurboRoute,
+  PropostaTokenRoute: PropostaTokenRoute,
+  SitesIdRoute: SitesIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
