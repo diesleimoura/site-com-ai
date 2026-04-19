@@ -30,7 +30,7 @@ const PLANS = [
   },
   {
     name: "Agência",
-    price: "R$ 249",
+    price: "R$ 299",
     period: "/mês",
     cta: "Assinar Agência",
     highlight: false,
