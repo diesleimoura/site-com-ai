@@ -2,6 +2,26 @@ import * as React from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
+// Patch global fetch once on the client to attach the Supabase access token
+// to TanStack Start server-function requests, so middleware can authenticate.
+if (typeof window !== "undefined" && !(window as unknown as { __sfPatched?: boolean }).__sfPatched) {
+  (window as unknown as { __sfPatched?: boolean }).__sfPatched = true;
+  const originalFetch = window.fetch.bind(window);
+  window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+    if (url.includes("/_serverFn/")) {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (token) {
+        const headers = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined));
+        if (!headers.has("authorization")) headers.set("authorization", `Bearer ${token}`);
+        return originalFetch(input, { ...init, headers });
+      }
+    }
+    return originalFetch(input, init);
+  };
+}
+
 type AuthContextValue = {
   user: User | null;
   session: Session | null;
