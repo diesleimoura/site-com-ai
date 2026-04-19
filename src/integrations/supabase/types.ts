@@ -14,7 +14,358 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          affiliate_active: boolean
+          affiliate_code: string | null
+          created_at: string
+          custom_domain: string | null
+          email: string | null
+          id: string
+          onboarded: boolean
+          pix_key: string | null
+          pix_key_type: string | null
+          plan: string
+          plan_expires_at: string | null
+          searches_used_this_month: number
+          sites_created_this_month: number
+          slug: string | null
+          updated_at: string
+        }
+        Insert: {
+          affiliate_active?: boolean
+          affiliate_code?: string | null
+          created_at?: string
+          custom_domain?: string | null
+          email?: string | null
+          id: string
+          onboarded?: boolean
+          pix_key?: string | null
+          pix_key_type?: string | null
+          plan?: string
+          plan_expires_at?: string | null
+          searches_used_this_month?: number
+          sites_created_this_month?: number
+          slug?: string | null
+          updated_at?: string
+        }
+        Update: {
+          affiliate_active?: boolean
+          affiliate_code?: string | null
+          created_at?: string
+          custom_domain?: string | null
+          email?: string | null
+          id?: string
+          onboarded?: boolean
+          pix_key?: string | null
+          pix_key_type?: string | null
+          plan?: string
+          plan_expires_at?: string | null
+          searches_used_this_month?: number
+          sites_created_this_month?: number
+          slug?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      proposals: {
+        Row: {
+          client_email: string | null
+          client_name: string | null
+          client_phone: string | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          monthly_price: number
+          paid_at: string | null
+          payment_method: string | null
+          payment_status: string
+          pix_code: string | null
+          pix_qr_code: string | null
+          setup_price: number
+          site_id: string
+          status: string
+          tenant_id: string
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          client_email?: string | null
+          client_name?: string | null
+          client_phone?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          monthly_price?: number
+          paid_at?: string | null
+          payment_method?: string | null
+          payment_status?: string
+          pix_code?: string | null
+          pix_qr_code?: string | null
+          setup_price?: number
+          site_id: string
+          status?: string
+          tenant_id: string
+          token: string
+          updated_at?: string
+        }
+        Update: {
+          client_email?: string | null
+          client_name?: string | null
+          client_phone?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          monthly_price?: number
+          paid_at?: string | null
+          payment_method?: string | null
+          payment_status?: string
+          pix_code?: string | null
+          pix_qr_code?: string | null
+          setup_price?: number
+          site_id?: string
+          status?: string
+          tenant_id?: string
+          token?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposals_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prospect_searches: {
+        Row: {
+          cache_expires_at: string | null
+          city: string
+          created_at: string
+          id: string
+          radius_km: number
+          results_cache: Json | null
+          segment: string
+          tenant_id: string
+        }
+        Insert: {
+          cache_expires_at?: string | null
+          city: string
+          created_at?: string
+          id?: string
+          radius_km?: number
+          results_cache?: Json | null
+          segment: string
+          tenant_id: string
+        }
+        Update: {
+          cache_expires_at?: string | null
+          city?: string
+          created_at?: string
+          id?: string
+          radius_km?: number
+          results_cache?: Json | null
+          segment?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      sites: {
+        Row: {
+          address: string | null
+          ai_edits_count: number
+          business_name: string
+          city: string | null
+          created_at: string
+          google_place_id: string | null
+          html_content: string | null
+          id: string
+          is_published: boolean
+          logo_url: string | null
+          monthly_price: number | null
+          phone: string | null
+          segment: string | null
+          setup_price: number | null
+          status: string
+          tenant_id: string
+          updated_at: string
+          whatsapp: string | null
+        }
+        Insert: {
+          address?: string | null
+          ai_edits_count?: number
+          business_name: string
+          city?: string | null
+          created_at?: string
+          google_place_id?: string | null
+          html_content?: string | null
+          id?: string
+          is_published?: boolean
+          logo_url?: string | null
+          monthly_price?: number | null
+          phone?: string | null
+          segment?: string | null
+          setup_price?: number | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Update: {
+          address?: string | null
+          ai_edits_count?: number
+          business_name?: string
+          city?: string | null
+          created_at?: string
+          google_place_id?: string | null
+          html_content?: string | null
+          id?: string
+          is_published?: boolean
+          logo_url?: string | null
+          monthly_price?: number | null
+          phone?: string | null
+          segment?: string | null
+          setup_price?: number | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          client_name: string | null
+          created_at: string
+          id: string
+          monthly_price: number
+          next_billing_date: string | null
+          proposal_id: string | null
+          site_id: string
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          client_name?: string | null
+          created_at?: string
+          id?: string
+          monthly_price: number
+          next_billing_date?: string | null
+          proposal_id?: string | null
+          site_id: string
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          client_name?: string | null
+          created_at?: string
+          id?: string
+          monthly_price?: number
+          next_billing_date?: string | null
+          proposal_id?: string | null
+          site_id?: string
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscriptions_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wallet_transactions: {
+        Row: {
+          amount: number
+          available_at: string | null
+          created_at: string
+          id: string
+          net_amount: number
+          proposal_id: string | null
+          status: string
+          tenant_id: string
+          type: string
+        }
+        Insert: {
+          amount: number
+          available_at?: string | null
+          created_at?: string
+          id?: string
+          net_amount: number
+          proposal_id?: string | null
+          status?: string
+          tenant_id: string
+          type: string
+        }
+        Update: {
+          amount?: number
+          available_at?: string | null
+          created_at?: string
+          id?: string
+          net_amount?: number
+          proposal_id?: string | null
+          status?: string
+          tenant_id?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wallet_transactions_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      withdrawals: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          pix_key: string
+          pix_key_type: string
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          pix_key: string
+          pix_key_type: string
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          pix_key?: string
+          pix_key_type?: string
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
