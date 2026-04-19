@@ -81,37 +81,48 @@ export const getPublicProposalFn = createServerFn({ method: "POST" })
     }).parse,
   )
   .handler(async ({ data }) => {
-    const db = getProposalAccessClient();
-    if (!db) return null;
+    try {
+      const db = getProposalAccessClient();
+      if (!db) return null;
 
-    const { data: prop, error } = await db
-      .from("proposals")
-      .select("token,setup_price,monthly_price,client_name,client_email,client_phone,payment_status,site_id")
-      .eq("token", data.token)
-      .maybeSingle();
+      const { data: prop, error } = await db
+        .from("proposals")
+        .select("token,setup_price,monthly_price,client_name,client_email,client_phone,payment_status,site_id")
+        .eq("token", data.token)
+        .maybeSingle();
 
-    if (error) throw new Error(error.message);
-    if (!prop) return null;
+      if (error || !prop) {
+        if (error) console.error("proposal lookup failed", error);
+        return null;
+      }
 
-    const { data: site, error: siteError } = await db
-      .from("sites")
-      .select("business_name,segment,city,html_content")
-      .eq("id", prop.site_id)
-      .maybeSingle();
+      const { data: site, error: siteError } = await db
+        .from("sites")
+        .select("business_name,segment,city,html_content")
+        .eq("id", prop.site_id)
+        .maybeSingle();
 
-    if (siteError) throw new Error(siteError.message);
+      if (siteError) {
+        console.error("proposal site lookup failed", siteError);
+        return null;
+      }
 
-    await db.from("proposals").update({ status: "viewed" }).eq("token", data.token);
+      const { error: updateError } = await db.from("proposals").update({ status: "viewed" }).eq("token", data.token);
+      if (updateError) console.error("proposal status update failed", updateError);
 
-    return {
-      proposal: {
-        token: prop.token,
-        setup_price: prop.setup_price,
-        monthly_price: prop.monthly_price,
-        payment_status: prop.payment_status,
-      },
-      site: site ?? null,
-    };
+      return {
+        proposal: {
+          token: prop.token,
+          setup_price: prop.setup_price,
+          monthly_price: prop.monthly_price,
+          payment_status: prop.payment_status,
+        },
+        site: site ?? null,
+      };
+    } catch (error) {
+      console.error("getPublicProposalFn failed", error);
+      return null;
+    }
   });
 
 export const submitProposalLeadFn = createServerFn({ method: "POST" })
