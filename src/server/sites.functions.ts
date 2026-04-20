@@ -110,6 +110,12 @@ Crie a landing page completa.`;
       .eq("id", data.siteId)
       .eq("tenant_id", userId);
     if (upErr) throw new Error(upErr.message);
+
+    await supabase
+      .from("profiles")
+      .update({ sites_created_this_month: used + 1 })
+      .eq("id", userId);
+
     return { ok: true };
   });
 
