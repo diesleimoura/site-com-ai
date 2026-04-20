@@ -1,9 +1,22 @@
 
-Brazil is UTC-3, so midnight BRT = 03:00 UTC. Change the cron expression from `0 0 1 * *` to `0 3 1 * *`.
+User confirmed "Sim" — they want a security scan to verify the backend (RLS policies, exposed data) is properly configured.
 
-## Plan
+This is a research/verification task, not an implementation task — but the scan itself requires the `security--run_security_scan` tool which isn't available in plan mode. So I'll present a short plan to run it.
 
-Create a new migration that unschedules the existing `reset-monthly-usage-counters` job and reschedules it with `0 3 1 * *` (03:00 UTC = 00:00 BRT) on the 1st of every month. Same SQL body, only the cron expression changes.
+## Plano: Varredura de segurança do backend
 
-## Note
-Brazil no longer observes DST, so UTC-3 is stable year-round — no adjustment needed.
+Vou executar uma varredura completa no Lovable Cloud para verificar:
+
+1. **RLS habilitado** em todas as tabelas (`profiles`, `sites`, `proposals`, `prospect_searches`, `subscriptions`, `wallet_transactions`, `withdrawals`)
+2. **Políticas RLS** corretamente escopadas por `tenant_id` / `auth.uid()` — sem políticas permissivas demais (`true`, `using (true)`)
+3. **Funções `SECURITY DEFINER`** com `search_path` fixo (já vi que `handle_new_user` e `set_updated_at` estão ok)
+4. **Linter do Supabase** para pegar avisos automáticos (extensões em schema público, índices faltando, etc.)
+5. **Dados sensíveis expostos** sem proteção adequada
+6. **Configurações de auth** (proteção contra senhas vazadas / HIBP)
+
+Ao final, te entrego um relatório com:
+- ✅ O que está seguro
+- ⚠️ Avisos (não-críticos, mas vale ajustar)
+- 🔴 Problemas críticos (se houver) + correção sugerida
+
+Se aparecer algo crítico, eu te apresento um plano separado para corrigir antes de aplicar qualquer mudança.
