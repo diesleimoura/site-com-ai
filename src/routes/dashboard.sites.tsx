@@ -108,6 +108,7 @@ function NewSiteModal() {
   }
 
   return (
+    <>
     <Dialog open={open} onOpenChange={(o) => { if (step < 0) setOpen(o); }}>
       <DialogTrigger asChild>
         <Button>
@@ -164,6 +165,17 @@ function NewSiteModal() {
         )}
       </DialogContent>
     </Dialog>
+    {upgrade && (
+      <UpgradeModal
+        open={!!upgrade}
+        onOpenChange={(o) => !o && setUpgrade(null)}
+        resource={upgrade.resource}
+        used={upgrade.used}
+        limit={upgrade.limit}
+        plan={upgrade.plan}
+      />
+    )}
+    </>
   );
 }
 
