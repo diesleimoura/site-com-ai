@@ -1,22 +1,44 @@
 
-## Corrigir bug crítico de login (credenciais na URL)
 
-**Problema:** Form de `/auth` está enviando `email` e `password` como query string na URL em vez de chamar Supabase. Causa: submit nativo do navegador ocorre antes da hidratação React, e o form não tem `method="post"` (defaulta para GET → query string).
+## Plano: adicionar Login com Google em `/auth`
 
-**Risco de segurança:** Senha do usuário ficou exposta na URL, no histórico do navegador e potencialmente em logs.
+Lovable Cloud tem suporte nativo e gerenciado para Google OAuth — não precisa de credenciais do usuário, nem configuração no Google Cloud Console. As credenciais gerenciadas funcionam imediatamente e podem ser substituídas depois pelas suas próprias (em Cloud → Users → Authentication Settings → Google) se quiser branding próprio.
 
-### Correções no `src/routes/auth.tsx`
+### Passos
 
-1. **Adicionar `method="post"` nos `<form>`** — garante que mesmo se o JS falhar em interceptar, o submit nativo não vira GET com credenciais visíveis.
-2. **Limpar query string ao montar a página** — se detectar `?email=` ou `?password=` na URL, remover via `window.history.replaceState` imediatamente, antes de qualquer renderização visível, para tirar do histórico do navegador.
-3. **Adicionar `noValidate` nos forms** e tratar validação só via Zod (já está), evitando submit nativo do browser em caso de validação HTML5 falhar.
+1. **Configurar o provedor Google** via ferramenta de Configure Social Login. Isso vai:
+   - Instalar o pacote `@lovable.dev/cloud-auth-js`
+   - Gerar o módulo `src/integrations/lovable/` (gerenciado automaticamente — não edito manualmente)
 
-### Recomendação ao usuário
+2. **Atualizar `src/routes/auth.tsx`**:
+   - Adicionar um botão **"Continuar com Google"** acima do form (visível tanto na aba "Entrar" quanto "Criar conta") com um separador "ou" entre o botão e os campos de email/senha
+   - Usar ícone do Google (SVG inline com cores oficiais — não usar lucide pois não tem o "G" colorido)
+   - Handler chama:
+     ```ts
+     const result = await lovable.auth.signInWithOAuth("google", {
+       redirect_uri: `${window.location.origin}/dashboard/sites`,
+     });
+     if (result.error) toast.error(result.error.message);
+     // se result.redirected → browser redireciona, nada a fazer
+     ```
+   - Estado de loading no botão durante o redirect
+   - Manter todo o fluxo email/senha existente intacto (incluindo as correções de segurança recentes)
 
-- **Trocar a senha imediatamente** (a senha `1759321755` ficou exposta na URL/histórico). Após o deploy do fix, abrir a tela de login, entrar com a senha atual e usar "esqueci minha senha" para definir uma nova.
-- Limpar histórico do navegador para remover a URL com a senha.
+### Layout do botão
 
-### Fora de escopo agora
+```
+┌─────────────────────────────────┐
+│  [G] Continuar com Google       │  (variant outline, full width)
+└─────────────────────────────────┘
+─────────── ou ───────────
+[ Email ]
+[ Senha ]
+[ Entrar ]
+```
 
-- Adicionar fluxo de "Esqueci minha senha" (não existe ainda — posso implementar depois se quiser).
-- Adicionar login com Google (mencionado nas guidelines, mas é mudança separada).
+### Fora de escopo
+
+- Configurar credenciais próprias do Google (BYOK) — usar gerenciado por padrão; usuário pode trocar depois pela UI do Cloud
+- Apple, GitHub e outros provedores
+- Fluxo de "Esqueci minha senha"
+
