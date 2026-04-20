@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { getPlanLimits } from "@/lib/plan-limits";
 
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const MODEL = "google/gemini-2.5-flash";
@@ -71,6 +72,19 @@ export const generateSiteFn = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+
+    // Plan-limit gating
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("plan, sites_created_this_month")
+      .eq("id", userId)
+      .single();
+    const limits = getPlanLimits(profile?.plan);
+    const used = profile?.sites_created_this_month ?? 0;
+    if (used >= limits.sites) {
+      throw new Error(`PLAN_LIMIT_SITES:${used}:${limits.sites}:${profile?.plan ?? "free"}`);
+    }
+
     const { data: site, error } = await supabase
       .from("sites")
       .select("*")
@@ -96,6 +110,12 @@ Crie a landing page completa.`;
       .eq("id", data.siteId)
       .eq("tenant_id", userId);
     if (upErr) throw new Error(upErr.message);
+
+    await supabase
+      .from("profiles")
+      .update({ sites_created_this_month: used + 1 })
+      .eq("id", userId);
+
     return { ok: true };
   });
 

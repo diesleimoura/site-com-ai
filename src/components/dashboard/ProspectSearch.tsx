@@ -10,6 +10,7 @@ import { prospectSearchFn } from "@/server/prospect.functions";
 import { generateSiteFn } from "@/server/sites.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
+import { UpgradeModal } from "@/components/UpgradeModal";
 
 export const SUGGESTIONS = [
   "Dentista", "Advogado", "Psicólogo", "Academia", "Restaurante", "Médico", "Veterinário",
@@ -41,6 +42,22 @@ export function ProspectSearch({ compact = false }: { compact?: boolean }) {
   const [results, setResults] = React.useState<Result[]>([]);
   const [filter, setFilter] = React.useState<"all" | "no_site">("all");
   const [generatingId, setGeneratingId] = React.useState<string | null>(null);
+  const [upgrade, setUpgrade] = React.useState<
+    { resource: "sites" | "searches"; used: number; limit: number; plan: string } | null
+  >(null);
+
+  function handlePlanError(err: unknown): boolean {
+    const msg = err instanceof Error ? err.message : "";
+    const m = msg.match(/^PLAN_LIMIT_(SITES|SEARCHES):(\d+):(\d+):(\w+)/);
+    if (!m) return false;
+    setUpgrade({
+      resource: m[1] === "SITES" ? "sites" : "searches",
+      used: Number(m[2]),
+      limit: Number(m[3]),
+      plan: m[4],
+    });
+    return true;
+  }
 
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -51,7 +68,7 @@ export function ProspectSearch({ compact = false }: { compact?: boolean }) {
       setResults(res.results as Result[]);
       if (res.mocked) toast.info("Resultados de demonstração (Google Places virá na fase 2).");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Falha");
+      if (!handlePlanError(err)) toast.error(err instanceof Error ? err.message : "Falha");
     } finally {
       setBusy(false);
     }
@@ -80,7 +97,7 @@ export function ProspectSearch({ compact = false }: { compact?: boolean }) {
       toast.success("Site gerado!");
       navigate({ to: "/sites/$id", params: { id: site.id } });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Falha");
+      if (!handlePlanError(err)) toast.error(err instanceof Error ? err.message : "Falha");
     } finally {
       setGeneratingId(null);
     }
@@ -191,6 +208,17 @@ export function ProspectSearch({ compact = false }: { compact?: boolean }) {
           </div>
         ))}
       </div>
+
+      {upgrade && (
+        <UpgradeModal
+          open={!!upgrade}
+          onOpenChange={(o) => !o && setUpgrade(null)}
+          resource={upgrade.resource}
+          used={upgrade.used}
+          limit={upgrade.limit}
+          plan={upgrade.plan}
+        />
+      )}
     </div>
   );
 }

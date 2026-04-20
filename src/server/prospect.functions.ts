@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { getPlanLimits } from "@/lib/plan-limits";
 
 // Deterministic mock prospect search. Will be replaced by Google Places in Phase 2.
 function mockResults(segment: string, city: string, count = 12) {
@@ -43,6 +44,19 @@ export const prospectSearchFn = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+
+    // Plan-limit gating
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("plan, searches_used_this_month")
+      .eq("id", userId)
+      .single();
+    const limits = getPlanLimits(profile?.plan);
+    const used = profile?.searches_used_this_month ?? 0;
+    if (used >= limits.searches) {
+      throw new Error(`PLAN_LIMIT_SEARCHES:${used}:${limits.searches}:${profile?.plan ?? "free"}`);
+    }
+
     const results = mockResults(data.segment, data.city);
     await supabase.from("prospect_searches").insert({
       tenant_id: userId,
@@ -52,5 +66,11 @@ export const prospectSearchFn = createServerFn({ method: "POST" })
       results_cache: results,
       cache_expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
     });
+
+    await supabase
+      .from("profiles")
+      .update({ searches_used_this_month: used + 1 })
+      .eq("id", userId);
+
     return { results, mocked: true };
   });

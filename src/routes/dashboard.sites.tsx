@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Plus, Eye, FileText, Trash2, Loader2 } from "lucide-react";
 import { generateSiteFn } from "@/server/sites.functions";
+import { UpgradeModal } from "@/components/UpgradeModal";
 
 export const Route = createFileRoute("/dashboard/sites")({
   component: SitesTab,
@@ -36,6 +37,24 @@ function NewSiteModal() {
   const generate = useServerFn(generateSiteFn);
   const [open, setOpen] = React.useState(false);
   const [step, setStep] = React.useState(-1);
+  const [upgrade, setUpgrade] = React.useState<
+    { resource: "sites" | "searches"; used: number; limit: number; plan: string } | null
+  >(null);
+
+  function handlePlanError(err: unknown): boolean {
+    const msg = err instanceof Error ? err.message : "";
+    const m = msg.match(/^PLAN_LIMIT_(SITES|SEARCHES):(\d+):(\d+):(\w+)/);
+    if (!m) return false;
+    setUpgrade({
+      resource: m[1] === "SITES" ? "sites" : "searches",
+      used: Number(m[2]),
+      limit: Number(m[3]),
+      plan: m[4],
+    });
+    setOpen(false);
+    setStep(-1);
+    return true;
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -82,11 +101,14 @@ function NewSiteModal() {
     } catch (err) {
       clearInterval(stepInterval);
       setStep(-1);
-      toast.error(err instanceof Error ? err.message : "Falha");
+      if (!handlePlanError(err)) {
+        toast.error(err instanceof Error ? err.message : "Falha");
+      }
     }
   }
 
   return (
+    <>
     <Dialog open={open} onOpenChange={(o) => { if (step < 0) setOpen(o); }}>
       <DialogTrigger asChild>
         <Button>
@@ -143,6 +165,17 @@ function NewSiteModal() {
         )}
       </DialogContent>
     </Dialog>
+    {upgrade && (
+      <UpgradeModal
+        open={!!upgrade}
+        onOpenChange={(o) => !o && setUpgrade(null)}
+        resource={upgrade.resource}
+        used={upgrade.used}
+        limit={upgrade.limit}
+        plan={upgrade.plan}
+      />
+    )}
+    </>
   );
 }
 
