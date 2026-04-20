@@ -1,48 +1,15 @@
 
-## Plan: Plan-based feature gating
+Simple SQL-only cron job — no server route needed since it's pure UPDATE.
 
-Block free-tier users from creating sites past their monthly limit and show an upgrade modal pointing to `/turbo`.
+## Plan
 
-### Limits per plan
-- **free**: 2 sites/month, 1 prospect search/month
-- **pro**: 80 sites/month, 10 searches/month
-- **agencia**: unlimited
+**1. Create migration enabling `pg_cron`** and scheduling a job named `reset-monthly-usage-counters`:
+- Cron expression: `0 0 1 * *` (00:00 UTC on the 1st of every month)
+- SQL: `UPDATE public.profiles SET sites_created_this_month = 0, searches_used_this_month = 0;`
 
-### Changes
+That's it. One migration, one cron job. Uses Option 1 (SQL-only) from the scheduling docs — no HTTP call, no auth, no edge function.
 
-**1. New helper `src/lib/plan-limits.ts`** (client-safe constants)
-```ts
-export const PLAN_LIMITS = {
-  free: { sites: 2, searches: 1 },
-  pro: { sites: 80, searches: 10 },
-  agencia: { sites: Infinity, searches: Infinity },
-};
-export function getPlanLimits(plan: string) { ... }
-```
-
-**2. New component `src/components/UpgradeModal.tsx`**
-- Reusable Dialog with title "Limite do plano atingido"
-- Shows current usage (X/Y sites used)
-- Two CTAs: "Ver planos" → navigates to `/turbo`, "Fechar"
-- Props: `open`, `onOpenChange`, `resource: "sites" | "searches"`, `used`, `limit`
-
-**3. Server-side enforcement in `src/server/sites.functions.ts`**
-- In `generateSiteFn` (or wherever site creation/generation happens): before insert, fetch profile's `plan` + `sites_created_this_month`, throw clear error `"PLAN_LIMIT_SITES"` if exceeded
-- After successful generation, increment `sites_created_this_month`
-- Same pattern in `prospect.functions.ts` `prospectSearchFn` for `searches_used_this_month` → throw `"PLAN_LIMIT_SEARCHES"`
-
-**4. Client integration in `src/components/dashboard/ProspectSearch.tsx`**
-- Fetch profile (plan + counters) via `useQuery`
-- Catch `PLAN_LIMIT_SITES` / `PLAN_LIMIT_SEARCHES` errors from server fns → open `<UpgradeModal>` instead of toast
-- Wire modal CTA to `navigate({ to: "/turbo" })`
-
-**5. Apply same gating in `src/routes/dashboard.sites.tsx`** if it has a manual "Create site" button (check & wire same modal).
-
-### Out of scope
-- Monthly counter reset (cron/scheduled function) — note for later
-- Real plan upgrades (still toast "em breve" on /turbo)
-- Editing the migrations to add new columns (counters already exist)
-
-### Technical notes
-- Counter increment should be atomic; use `supabaseAdmin.rpc` if needed, otherwise a simple `update profiles set sites_created_this_month = sites_created_this_month + 1`
-- Server fn errors propagate as `Error` → check `err.message.includes("PLAN_LIMIT_")` on client
+## Out of scope
+- Per-user reset based on `plan_expires_at` (would need a more complex job)
+- Audit log of resets
+- Timezone configuration (UTC is fine; can revisit if user wants Brazil time)
