@@ -88,7 +88,7 @@ function AuthPage() {
               <TabsTrigger value="signup">Criar conta</TabsTrigger>
             </TabsList>
             <TabsContent value="signin">
-              <form onSubmit={(e) => handleSubmit(e, "signin")} className="space-y-4 pt-4">
+              <form method="post" noValidate onSubmit={(e) => handleSubmit(e, "signin")} className="space-y-4 pt-4">
                 <Field name="email" label="Email" type="email" />
                 <Field name="password" label="Senha" type="password" />
                 <Button type="submit" className="w-full" disabled={busy}>
