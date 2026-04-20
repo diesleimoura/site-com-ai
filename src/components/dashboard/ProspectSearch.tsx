@@ -208,6 +208,17 @@ export function ProspectSearch({ compact = false }: { compact?: boolean }) {
           </div>
         ))}
       </div>
+
+      {upgrade && (
+        <UpgradeModal
+          open={!!upgrade}
+          onOpenChange={(o) => !o && setUpgrade(null)}
+          resource={upgrade.resource}
+          used={upgrade.used}
+          limit={upgrade.limit}
+          plan={upgrade.plan}
+        />
+      )}
     </div>
   );
 }

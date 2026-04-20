@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Plus, Eye, FileText, Trash2, Loader2 } from "lucide-react";
 import { generateSiteFn } from "@/server/sites.functions";
+import { UpgradeModal } from "@/components/UpgradeModal";
 
 export const Route = createFileRoute("/dashboard/sites")({
   component: SitesTab,
@@ -36,6 +37,24 @@ function NewSiteModal() {
   const generate = useServerFn(generateSiteFn);
   const [open, setOpen] = React.useState(false);
   const [step, setStep] = React.useState(-1);
+  const [upgrade, setUpgrade] = React.useState<
+    { resource: "sites" | "searches"; used: number; limit: number; plan: string } | null
+  >(null);
+
+  function handlePlanError(err: unknown): boolean {
+    const msg = err instanceof Error ? err.message : "";
+    const m = msg.match(/^PLAN_LIMIT_(SITES|SEARCHES):(\d+):(\d+):(\w+)/);
+    if (!m) return false;
+    setUpgrade({
+      resource: m[1] === "SITES" ? "sites" : "searches",
+      used: Number(m[2]),
+      limit: Number(m[3]),
+      plan: m[4],
+    });
+    setOpen(false);
+    setStep(-1);
+    return true;
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
