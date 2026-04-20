@@ -1,31 +1,48 @@
 
-O usuário quer transformar a `/turbo` em uma tela de upsell/paywall que destaque os planos pagos (Pro e Agência) ao invés de mostrar a busca de prospecção diretamente.
+## Plan: Plan-based feature gating
 
-## Mudanças propostas
+Block free-tier users from creating sites past their monthly limit and show an upgrade modal pointing to `/turbo`.
 
-**1. Reescrever `src/routes/turbo.tsx`** como página de upgrade:
+### Limits per plan
+- **free**: 2 sites/month, 1 prospect search/month
+- **pro**: 80 sites/month, 10 searches/month
+- **agencia**: unlimited
 
-- Header igual (voltar p/ Dashboard + título "Modo Turbo")
-- Hero: "Desbloqueie o Modo Turbo" com explicação curta
-- Comparativo lado-a-lado de 3 planos (reaproveitando o estilo de `/planos`):
-  - **Grátis (atual)**: 2 sites/mês, 1 busca, sem publicação — botão desabilitado "Plano atual"
-  - **Pro — R$ 89,90/mês**: 80 sites, 10 buscas Turbo, publicação, domínio próprio — destacado
-  - **Agência — R$ 299/mês** (atualizar de R$ 249): sites ilimitados, 20 buscas Turbo, tudo do Pro — badge "Melhor custo"
-- Seção "O que você ganha com o Turbo": 3-4 cards com ícones (busca em massa, filtros avançados, geração ilimitada, exportar leads)
-- CTA final: "Já tenho plano" → link p/ `/dashboard/cobranca`
-- Botões "Assinar" disparam `toast.info("Pagamentos chegam em breve")` por enquanto (sem Mercado Pago ainda)
+### Changes
 
-**2. Atualizar `src/routes/planos.tsx`** para refletir o novo preço da Agência (R$ 299).
+**1. New helper `src/lib/plan-limits.ts`** (client-safe constants)
+```ts
+export const PLAN_LIMITS = {
+  free: { sites: 2, searches: 1 },
+  pro: { sites: 80, searches: 10 },
+  agencia: { sites: Infinity, searches: Infinity },
+};
+export function getPlanLimits(plan: string) { ... }
+```
 
-**3. Não mexer em `/dashboard/prospectar`** — continua sendo onde a busca real acontece (com limite de 1 busca/mês no plano grátis, lógica fica para depois).
+**2. New component `src/components/UpgradeModal.tsx`**
+- Reusable Dialog with title "Limite do plano atingido"
+- Shows current usage (X/Y sites used)
+- Two CTAs: "Ver planos" → navigates to `/turbo`, "Fechar"
+- Props: `open`, `onOpenChange`, `resource: "sites" | "searches"`, `used`, `limit`
 
-## Detalhes técnicos
+**3. Server-side enforcement in `src/server/sites.functions.ts`**
+- In `generateSiteFn` (or wherever site creation/generation happens): before insert, fetch profile's `plan` + `sites_created_this_month`, throw clear error `"PLAN_LIMIT_SITES"` if exceeded
+- After successful generation, increment `sites_created_this_month`
+- Same pattern in `prospect.functions.ts` `prospectSearchFn` for `searches_used_this_month` → throw `"PLAN_LIMIT_SEARCHES"`
 
-- Componentes: `Button`, `Card` (inline), ícones `lucide-react` (Zap, Check, Sparkles, Crown, Rocket)
-- Sem novas tabelas/server functions — é página estática de marketing
-- Layout responsivo: `grid md:grid-cols-3` para os planos
-- Manter dark theme do dashboard
+**4. Client integration in `src/components/dashboard/ProspectSearch.tsx`**
+- Fetch profile (plan + counters) via `useQuery`
+- Catch `PLAN_LIMIT_SITES` / `PLAN_LIMIT_SEARCHES` errors from server fns → open `<UpgradeModal>` instead of toast
+- Wire modal CTA to `navigate({ to: "/turbo" })`
 
-## Fora de escopo (próximas fases)
-- Integração real de pagamento (Mercado Pago/Stripe) — fica para quando o usuário aprovar
-- Lógica de feature-gating por plano nas outras telas
+**5. Apply same gating in `src/routes/dashboard.sites.tsx`** if it has a manual "Create site" button (check & wire same modal).
+
+### Out of scope
+- Monthly counter reset (cron/scheduled function) — note for later
+- Real plan upgrades (still toast "em breve" on /turbo)
+- Editing the migrations to add new columns (counters already exist)
+
+### Technical notes
+- Counter increment should be atomic; use `supabaseAdmin.rpc` if needed, otherwise a simple `update profiles set sites_created_this_month = sites_created_this_month + 1`
+- Server fn errors propagate as `Error` → check `err.message.includes("PLAN_LIMIT_")` on client
