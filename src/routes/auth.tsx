@@ -28,6 +28,17 @@ function AuthPage() {
     if (!loading && user) navigate({ to: "/dashboard/sites" });
   }, [loading, user, navigate]);
 
+  // Strip any leaked credentials from the URL immediately on mount
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.has("email") || url.searchParams.has("password")) {
+      url.searchParams.delete("email");
+      url.searchParams.delete("password");
+      window.history.replaceState({}, "", url.pathname + (url.search ? url.search : "") + url.hash);
+    }
+  }, []);
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>, mode: "signin" | "signup") {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
@@ -77,7 +88,7 @@ function AuthPage() {
               <TabsTrigger value="signup">Criar conta</TabsTrigger>
             </TabsList>
             <TabsContent value="signin">
-              <form onSubmit={(e) => handleSubmit(e, "signin")} className="space-y-4 pt-4">
+              <form method="post" noValidate onSubmit={(e) => handleSubmit(e, "signin")} className="space-y-4 pt-4">
                 <Field name="email" label="Email" type="email" />
                 <Field name="password" label="Senha" type="password" />
                 <Button type="submit" className="w-full" disabled={busy}>
@@ -86,7 +97,7 @@ function AuthPage() {
               </form>
             </TabsContent>
             <TabsContent value="signup">
-              <form onSubmit={(e) => handleSubmit(e, "signup")} className="space-y-4 pt-4">
+              <form method="post" noValidate onSubmit={(e) => handleSubmit(e, "signup")} className="space-y-4 pt-4">
                 <Field name="email" label="Email" type="email" />
                 <Field name="password" label="Senha (mín. 6)" type="password" />
                 <Button type="submit" className="w-full" disabled={busy}>
