@@ -101,7 +101,9 @@ function NewSiteModal() {
     } catch (err) {
       clearInterval(stepInterval);
       setStep(-1);
-      toast.error(err instanceof Error ? err.message : "Falha");
+      if (!handlePlanError(err)) {
+        toast.error(err instanceof Error ? err.message : "Falha");
+      }
     }
   }
 
