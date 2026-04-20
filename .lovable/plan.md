@@ -1,15 +1,9 @@
 
-Simple SQL-only cron job — no server route needed since it's pure UPDATE.
+Brazil is UTC-3, so midnight BRT = 03:00 UTC. Change the cron expression from `0 0 1 * *` to `0 3 1 * *`.
 
 ## Plan
 
-**1. Create migration enabling `pg_cron`** and scheduling a job named `reset-monthly-usage-counters`:
-- Cron expression: `0 0 1 * *` (00:00 UTC on the 1st of every month)
-- SQL: `UPDATE public.profiles SET sites_created_this_month = 0, searches_used_this_month = 0;`
+Create a new migration that unschedules the existing `reset-monthly-usage-counters` job and reschedules it with `0 3 1 * *` (03:00 UTC = 00:00 BRT) on the 1st of every month. Same SQL body, only the cron expression changes.
 
-That's it. One migration, one cron job. Uses Option 1 (SQL-only) from the scheduling docs — no HTTP call, no auth, no edge function.
-
-## Out of scope
-- Per-user reset based on `plan_expires_at` (would need a more complex job)
-- Audit log of resets
-- Timezone configuration (UTC is fine; can revisit if user wants Brazil time)
+## Note
+Brazil no longer observes DST, so UTC-3 is stable year-round — no adjustment needed.
