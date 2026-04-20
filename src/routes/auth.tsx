@@ -97,7 +97,7 @@ function AuthPage() {
               </form>
             </TabsContent>
             <TabsContent value="signup">
-              <form onSubmit={(e) => handleSubmit(e, "signup")} className="space-y-4 pt-4">
+              <form method="post" noValidate onSubmit={(e) => handleSubmit(e, "signup")} className="space-y-4 pt-4">
                 <Field name="email" label="Email" type="email" />
                 <Field name="password" label="Senha (mín. 6)" type="password" />
                 <Button type="submit" className="w-full" disabled={busy}>
