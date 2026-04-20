@@ -10,6 +10,7 @@ import { prospectSearchFn } from "@/server/prospect.functions";
 import { generateSiteFn } from "@/server/sites.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
+import { UpgradeModal } from "@/components/UpgradeModal";
 
 export const SUGGESTIONS = [
   "Dentista", "Advogado", "Psicólogo", "Academia", "Restaurante", "Médico", "Veterinário",
