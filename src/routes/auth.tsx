@@ -28,6 +28,17 @@ function AuthPage() {
     if (!loading && user) navigate({ to: "/dashboard/sites" });
   }, [loading, user, navigate]);
 
+  // Strip any leaked credentials from the URL immediately on mount
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.has("email") || url.searchParams.has("password")) {
+      url.searchParams.delete("email");
+      url.searchParams.delete("password");
+      window.history.replaceState({}, "", url.pathname + (url.search ? url.search : "") + url.hash);
+    }
+  }, []);
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>, mode: "signin" | "signup") {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
