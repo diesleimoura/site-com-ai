@@ -172,6 +172,42 @@ export type Database = {
         }
         Relationships: []
       }
+      site_generation_jobs: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          progress: number
+          site_id: string
+          status: string
+          step: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          progress?: number
+          site_id: string
+          status?: string
+          step?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          progress?: number
+          site_id?: string
+          status?: string
+          step?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       sites: {
         Row: {
           address: string | null
