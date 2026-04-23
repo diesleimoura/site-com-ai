@@ -1,34 +1,29 @@
 
 
-## Atualizar plano do usuário `mouradieslei@gmail.com` para Agência
+## Live progress bar + step list during site generation
 
-Vou rodar um UPDATE direto na tabela `profiles` setando `plan = 'agencia'` para o seu email. O plano Agência já tem sites e buscas ilimitados (definidos em `src/lib/plan-limits.ts` como `Infinity`).
+The progress page (`/sites/$id/gerando`) already has a circular indicator and a 4-step checklist that listens to `site_generation_jobs` via Realtime + polling. Will enhance the experience so the user clearly sees a progress bar and live step updates, and unify both entry points to use this screen.
 
-### O que será feito
+### Changes
 
-1. **Migration SQL** atualizando seu profile:
-   ```sql
-   update public.profiles
-   set plan = 'agencia',
-       plan_expires_at = null,
-       searches_used_this_month = 0,
-       sites_created_this_month = 0,
-       updated_at = now()
-   where email = 'mouradieslei@gmail.com';
-   ```
-   - `plan = 'agencia'` → desbloqueia limites ilimitados
-   - `plan_expires_at = null` → sem expiração
-   - Zera os contadores de uso do mês para você começar limpo
+**1. `src/routes/sites.$id.gerando.tsx` — richer live progress**
+- Add a horizontal `<Progress>` bar (shadcn) above the step list, with the percentage label on the right (e.g. "Gerando… 55%").
+- Add a smooth client-side interpolator: between server checkpoints (10 → 30 → 55 → 90), animate the displayed value forward by ~1% every 600ms toward the next milestone, so the bar never sits frozen. Snap to the real value whenever the job row updates and lock at 100% when `status === "completed"`.
+- Show a short live caption under the bar reflecting the current step ("Analisando o negócio…", "Criando o design…", etc.).
+- Keep the circular indicator and existing step checklist (active step still spins, done steps get the check).
+- Keep the failure UI and the auto-redirect to `/sites/$id` on completion.
 
-2. **Verificação** com SELECT confirmando que o registro foi atualizado.
+**2. `src/components/dashboard/ProspectSearch.tsx`**
+- After `generate({ data: { siteId } })` succeeds, navigate to `/sites/$id/gerando` (already done — verify nothing changed).
 
-### Observação sobre o build error
+**3. `src/routes/dashboard.sites.tsx` — unify entry points**
+- Replace the inline modal stepper with the same flow: create the site, call `generateSiteFn`, close the modal, and `navigate({ to: "/sites/$id/gerando", params: { id } })`. This way the "Novo Site" button on the Sites tab also leads to the live progress screen instead of a fake timed stepper inside the dialog.
 
-O erro `Cannot find module '@dnd-kit/utilities'` em `dashboard.crm.tsx` é de outra tarefa (Kanban do CRM) — não tem relação com esta mudança e não bloqueia a atualização do plano. Posso corrigir em seguida instalando o pacote `@dnd-kit/utilities` (junto com `@dnd-kit/core` e `@dnd-kit/sortable` se ainda não estiverem) num passo separado, se quiser.
+### No backend changes
+The `site_generation_jobs` table, RLS, Realtime publication and the `runGenerationWorker` checkpoints (10/30/55/90/100) already drive the UI. No SQL or server-function changes needed.
 
-### Fora de escopo
-
-- Mudanças de schema, novos campos ou roles administrativas
-- Sistema de "admin" para promover outros usuários (hoje a alteração é manual por migration)
-- Correção do erro do `@dnd-kit/utilities`
+### Files touched
+- `src/routes/sites.$id.gerando.tsx` (edit)
+- `src/routes/dashboard.sites.tsx` (edit)
+- `src/components/dashboard/ProspectSearch.tsx` (verify only)
 
