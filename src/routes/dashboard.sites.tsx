@@ -28,15 +28,13 @@ const siteSchema = z.object({
   description: z.string().max(500).optional(),
 });
 
-const STEPS = ["Analisando negócio", "Criando design", "Escrevendo textos", "Finalizando"];
-
 function NewSiteModal() {
   const { user } = useAuth();
   const qc = useQueryClient();
   const navigate = useNavigate();
   const generate = useServerFn(generateSiteFn);
   const [open, setOpen] = React.useState(false);
-  const [step, setStep] = React.useState(-1);
+  const [submitting, setSubmitting] = React.useState(false);
   const [upgrade, setUpgrade] = React.useState<
     { resource: "sites" | "searches"; used: number; limit: number; plan: string } | null
   >(null);
@@ -52,7 +50,6 @@ function NewSiteModal() {
       plan: m[4],
     });
     setOpen(false);
-    setStep(-1);
     return true;
   }
 
@@ -71,11 +68,7 @@ function NewSiteModal() {
       return;
     }
 
-    setStep(0);
-    const stepInterval = setInterval(() => {
-      setStep((s) => (s < STEPS.length - 1 ? s + 1 : s));
-    }, 1500);
-
+    setSubmitting(true);
     try {
       const { data: site, error } = await supabase
         .from("sites")
@@ -91,25 +84,21 @@ function NewSiteModal() {
       if (error || !site) throw new Error(error?.message ?? "Falha ao criar");
 
       await generate({ data: { siteId: site.id } });
-      clearInterval(stepInterval);
-      setStep(STEPS.length);
-      toast.success("Site gerado com sucesso!");
       qc.invalidateQueries({ queryKey: ["sites"] });
       setOpen(false);
-      setStep(-1);
-      navigate({ to: "/sites/$id", params: { id: site.id } });
+      navigate({ to: "/sites/$id/gerando", params: { id: site.id } });
     } catch (err) {
-      clearInterval(stepInterval);
-      setStep(-1);
       if (!handlePlanError(err)) {
         toast.error(err instanceof Error ? err.message : "Falha");
       }
+    } finally {
+      setSubmitting(false);
     }
   }
 
   return (
     <>
-    <Dialog open={open} onOpenChange={(o) => { if (step < 0) setOpen(o); }}>
+    <Dialog open={open} onOpenChange={(o) => { if (!submitting) setOpen(o); }}>
       <DialogTrigger asChild>
         <Button>
           <Plus className="h-4 w-4" /> Novo Site
@@ -119,50 +108,37 @@ function NewSiteModal() {
         <DialogHeader>
           <DialogTitle>Criar novo site com IA</DialogTitle>
         </DialogHeader>
-        {step >= 0 ? (
-          <div className="space-y-4 py-4">
-            {STEPS.map((s, i) => (
-              <div key={s} className="flex items-center gap-3 text-sm">
-                {i < step ? (
-                  <span className="grid h-6 w-6 place-items-center rounded-full bg-success text-success-foreground">
-                    ✓
-                  </span>
-                ) : i === step ? (
-                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                ) : (
-                  <span className="grid h-6 w-6 place-items-center rounded-full border border-border text-muted-foreground">
-                    {i + 1}
-                  </span>
-                )}
-                <span className={i <= step ? "font-medium" : "text-muted-foreground"}>{s}</span>
-              </div>
-            ))}
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div>
+            <Label htmlFor="business_name">Nome do negócio</Label>
+            <Input id="business_name" name="business_name" required />
           </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label htmlFor="business_name">Nome do negócio</Label>
-              <Input id="business_name" name="business_name" required />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label htmlFor="segment">Segmento</Label>
-                <Input id="segment" name="segment" placeholder="Ex.: Dentista" required />
-              </div>
-              <div>
-                <Label htmlFor="city">Cidade</Label>
-                <Input id="city" name="city" required />
-              </div>
+              <Label htmlFor="segment">Segmento</Label>
+              <Input id="segment" name="segment" placeholder="Ex.: Dentista" required />
             </div>
             <div>
-              <Label htmlFor="description">Descrição (opcional)</Label>
-              <Textarea id="description" name="description" rows={3} />
+              <Label htmlFor="city">Cidade</Label>
+              <Input id="city" name="city" required />
             </div>
-            <DialogFooter>
-              <Button type="submit">Gerar com IA</Button>
-            </DialogFooter>
-          </form>
-        )}
+          </div>
+          <div>
+            <Label htmlFor="description">Descrição (opcional)</Label>
+            <Textarea id="description" name="description" rows={3} />
+          </div>
+          <DialogFooter>
+            <Button type="submit" disabled={submitting}>
+              {submitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" /> Iniciando…
+                </>
+              ) : (
+                "Gerar com IA"
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
     {upgrade && (
