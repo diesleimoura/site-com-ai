@@ -3,35 +3,36 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { getPlanLimits } from "@/lib/plan-limits";
 
-const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const MODEL = "google/gemini-2.5-flash";
+const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
+const ANTHROPIC_MODEL = "claude-sonnet-4-5-20250929";
 
 async function callAI(systemPrompt: string, userPrompt: string): Promise<string> {
-  const apiKey = process.env.LOVABLE_API_KEY;
-  if (!apiKey) throw new Error("LOVABLE_API_KEY não configurada");
-  const res = await fetch(GATEWAY_URL, {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY não configurada");
+  const res = await fetch(ANTHROPIC_URL, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${apiKey}`,
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: MODEL,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
+      model: ANTHROPIC_MODEL,
+      max_tokens: 8000,
+      system: systemPrompt,
+      messages: [{ role: "user", content: userPrompt }],
     }),
   });
   if (!res.ok) {
-    if (res.status === 429) throw new Error("Limite de requisições atingido. Tente em alguns segundos.");
-    if (res.status === 402) throw new Error("Créditos da IA esgotados. Adicione créditos no workspace.");
+    if (res.status === 429) throw new Error("Limite de requisições da Anthropic atingido. Tente novamente em instantes.");
+    if (res.status === 401) throw new Error("Chave Anthropic inválida. Verifique ANTHROPIC_API_KEY.");
+    if (res.status === 402 || res.status === 403) throw new Error("Créditos da Anthropic esgotados ou acesso negado.");
     const t = await res.text();
-    console.error("AI gateway error", res.status, t);
-    throw new Error("Falha na geração com IA");
+    console.error("Anthropic error", res.status, t);
+    throw new Error("Falha na geração com IA (Anthropic)");
   }
   const json = await res.json();
-  const content = json.choices?.[0]?.message?.content;
+  const content = json.content?.[0]?.text;
   if (!content) throw new Error("Resposta vazia da IA");
   return String(content);
 }
