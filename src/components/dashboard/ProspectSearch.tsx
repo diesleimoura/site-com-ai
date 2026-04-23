@@ -10,6 +10,7 @@ import { prospectSearchFn } from "@/server/prospect.functions";
 import { generateSiteFn } from "@/server/sites.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
+import { useInvalidateProfile } from "@/lib/use-profile";
 import { UpgradeModal } from "@/components/UpgradeModal";
 
 export const SUGGESTIONS = [
@@ -35,6 +36,7 @@ export function ProspectSearch({ compact = false }: { compact?: boolean }) {
   const generate = useServerFn(generateSiteFn);
   const { user } = useAuth();
   const navigate = useNavigate();
+  const invalidateProfile = useInvalidateProfile();
   const [segment, setSegment] = React.useState("");
   const [city, setCity] = React.useState("");
   const [radius, setRadius] = React.useState(5);
@@ -66,7 +68,8 @@ export function ProspectSearch({ compact = false }: { compact?: boolean }) {
     try {
       const res = await search({ data: { segment, city, radiusKm: radius } });
       setResults(res.results as Result[]);
-      if (res.mocked) toast.info("Resultados de demonstração (Google Places virá na fase 2).");
+      if (res.mocked) toast.info("Resultados de demonstração (chave SerpApi indisponível).");
+      invalidateProfile();
     } catch (err) {
       if (!handlePlanError(err)) toast.error(err instanceof Error ? err.message : "Falha");
     } finally {
@@ -94,6 +97,7 @@ export function ProspectSearch({ compact = false }: { compact?: boolean }) {
         .single();
       if (error || !site) throw new Error(error?.message);
       await generate({ data: { siteId: site.id } });
+      invalidateProfile();
       toast.success("Site gerado!");
       navigate({ to: "/sites/$id", params: { id: site.id } });
     } catch (err) {
