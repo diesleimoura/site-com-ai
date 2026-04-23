@@ -4,6 +4,7 @@ import * as React from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
+import { useProfile, useInvalidateProfile } from "@/lib/use-profile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,21 +16,15 @@ export const Route = createFileRoute("/dashboard/carteira")({
 
 function CarteiraTab() {
   const { user } = useAuth();
-  const { data: profile, refetch } = useQuery({
-    queryKey: ["profile-wallet", user?.id],
-    enabled: !!user,
-    queryFn: async () => {
-      const { data } = await supabase.from("profiles").select("*").eq("id", user!.id).single();
-      return data;
-    },
-  });
+  const { data: profile } = useProfile();
+  const invalidateProfile = useInvalidateProfile();
   const { data: tx } = useQuery({
     queryKey: ["wallet-tx", user?.id],
     enabled: !!user,
     queryFn: async () => {
       const { data } = await supabase
         .from("wallet_transactions")
-        .select("*")
+        .select("id,status,net_amount,type,amount,created_at")
         .order("created_at", { ascending: false });
       return data ?? [];
     },
@@ -40,7 +35,7 @@ function CarteiraTab() {
     queryFn: async () => {
       const { data } = await supabase
         .from("withdrawals")
-        .select("*")
+        .select("id,amount,status,created_at")
         .order("created_at", { ascending: false });
       return data ?? [];
     },
@@ -68,7 +63,7 @@ function CarteiraTab() {
       .eq("id", user.id);
     if (error) return toast.error(error.message);
     toast.success("Chave PIX salva");
-    refetch();
+    invalidateProfile();
   }
 
   async function requestWithdrawal() {

@@ -57,13 +57,22 @@ function DefaultErrorComponent({ error, reset }: { error: Error; reset: () => vo
 
 export const getRouter = () => {
   const queryClient = new QueryClient({
-    defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
+    defaultOptions: {
+      queries: {
+        staleTime: 5 * 60_000,
+        gcTime: 10 * 60_000,
+        retry: 1,
+        refetchOnWindowFocus: false,
+      },
+    },
   });
+
   const router = createRouter({
     routeTree,
     context: { queryClient },
     scrollRestoration: true,
-    defaultPreloadStaleTime: 0,
+    defaultPreload: "intent",
+    defaultPreloadStaleTime: 30_000,
     defaultErrorComponent: DefaultErrorComponent,
   });
 

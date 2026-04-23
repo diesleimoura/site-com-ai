@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
+import { useProfile, useInvalidateProfile } from "@/lib/use-profile";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Users, Copy } from "lucide-react";
@@ -12,20 +12,14 @@ export const Route = createFileRoute("/dashboard/afiliados")({
 
 function AfiliadosTab() {
   const { user } = useAuth();
-  const { data: profile, refetch } = useQuery({
-    queryKey: ["profile-aff", user?.id],
-    enabled: !!user,
-    queryFn: async () => {
-      const { data } = await supabase.from("profiles").select("*").eq("id", user!.id).single();
-      return data;
-    },
-  });
+  const { data: profile } = useProfile();
+  const invalidateProfile = useInvalidateProfile();
 
   async function activate() {
     const { error } = await supabase.from("profiles").update({ affiliate_active: true }).eq("id", user!.id);
     if (error) return toast.error(error.message);
     toast.success("Programa de afiliados ativado");
-    refetch();
+    invalidateProfile();
   }
 
   if (!profile?.affiliate_active) {

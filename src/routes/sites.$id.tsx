@@ -15,6 +15,7 @@ import { Loader2 } from "lucide-react";
 import { createProposalFn } from "@/server/proposals.functions";
 import { EditorToolbar } from "@/components/site-editor/EditorToolbar";
 import { AiChatPanel } from "@/components/site-editor/AiChatPanel";
+import { PreviewFrame } from "@/components/site-editor/PreviewFrame";
 import type { Viewport } from "@/components/site-editor/ViewportToggle";
 import { cn } from "@/lib/utils";
 
@@ -30,6 +31,7 @@ function SitePreviewPage() {
 
   const { data: site, isLoading } = useQuery({
     queryKey: ["site", id],
+    staleTime: 60_000,
     queryFn: async () => {
       const { data, error } = await supabase.from("sites").select("*").eq("id", id).single();
       if (error) throw error;
@@ -71,16 +73,10 @@ function SitePreviewPage() {
               "flex justify-center bg-background",
               viewport === "mobile" ? "p-4" : "",
             )}>
-              <iframe
+              <PreviewFrame
                 title={slug}
-                srcDoc={site.html_content ?? "<html><body><p style='font-family:sans-serif;padding:2rem'>Sem conteúdo gerado</p></body></html>"}
-                className={cn(
-                  "border-0 bg-white transition-all",
-                  viewport === "mobile"
-                    ? "h-[calc(100vh-200px)] w-[375px] rounded-lg shadow-md"
-                    : "h-[calc(100vh-160px)] w-full",
-                )}
-                sandbox="allow-same-origin"
+                html={site.html_content}
+                viewport={viewport}
               />
             </div>
           </div>

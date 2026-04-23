@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
+import { useProfile } from "@/lib/use-profile";
 import { Globe, FileText, CheckCircle2, Wallet, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -10,6 +11,7 @@ export function StatsCards() {
   const { data } = useQuery({
     queryKey: ["dash-stats", user?.id],
     enabled: !!user,
+    staleTime: 60_000,
     queryFn: async () => {
       const [sites, props, sold, revenue] = await Promise.all([
         supabase.from("sites").select("id", { count: "exact", head: true }),
@@ -55,15 +57,7 @@ export function StatsCards() {
 }
 
 export function PlanCards() {
-  const { user } = useAuth();
-  const { data: profile } = useQuery({
-    queryKey: ["profile", user?.id],
-    enabled: !!user,
-    queryFn: async () => {
-      const { data } = await supabase.from("profiles").select("*").eq("id", user!.id).single();
-      return data;
-    },
-  });
+  const { data: profile } = useProfile();
   const isFree = (profile?.plan ?? "free") === "free";
   const sitesUsed = profile?.sites_created_this_month ?? 0;
   const sitesLimit = isFree ? 2 : 80;

@@ -1,10 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
 import * as React from "react";
 import { z } from "zod";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
+import { useProfile, useInvalidateProfile } from "@/lib/use-profile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,14 +18,8 @@ const slugSchema = z.string().min(3).max(40).regex(/^[a-z0-9-]+$/, "Use apenas l
 
 function ContaTab() {
   const { user } = useAuth();
-  const { data: profile, refetch } = useQuery({
-    queryKey: ["profile-conta", user?.id],
-    enabled: !!user,
-    queryFn: async () => {
-      const { data } = await supabase.from("profiles").select("*").eq("id", user!.id).single();
-      return data;
-    },
-  });
+  const { data: profile } = useProfile();
+  const invalidateProfile = useInvalidateProfile();
   const [slug, setSlug] = React.useState("");
   React.useEffect(() => setSlug(profile?.slug ?? ""), [profile]);
 
@@ -38,7 +32,7 @@ function ContaTab() {
       return toast.error(error.message);
     }
     toast.success("Link salvo");
-    refetch();
+    invalidateProfile();
   }
 
   return (
