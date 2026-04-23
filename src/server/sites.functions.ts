@@ -1,11 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { getPlanLimits } from "@/lib/plan-limits";
 
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
-// Haiku é ~5x mais rápido que Sonnet — evita upstream timeout do worker.
-const ANTHROPIC_MODEL = "claude-haiku-4-5";
+// Sonnet 4.5 — qualidade alta. Rodamos em background para não estourar o timeout do worker.
+const ANTHROPIC_MODEL = "claude-sonnet-4-5-20250929";
 
 async function callAI(systemPrompt: string, userPrompt: string): Promise<string> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -19,15 +20,15 @@ async function callAI(systemPrompt: string, userPrompt: string): Promise<string>
     },
     body: JSON.stringify({
       model: ANTHROPIC_MODEL,
-      max_tokens: 4096,
+      max_tokens: 8000,
       system: systemPrompt,
       messages: [{ role: "user", content: userPrompt }],
     }),
   });
   if (!res.ok) {
-    if (res.status === 429) throw new Error("Limite de requisições da Anthropic atingido. Tente novamente em instantes.");
-    if (res.status === 401) throw new Error("Chave Anthropic inválida. Verifique ANTHROPIC_API_KEY.");
-    if (res.status === 402 || res.status === 403) throw new Error("Créditos da Anthropic esgotados ou acesso negado.");
+    if (res.status === 429) throw new Error("Limite de requisições da Anthropic atingido.");
+    if (res.status === 401) throw new Error("Chave Anthropic inválida.");
+    if (res.status === 402 || res.status === 403) throw new Error("Créditos da Anthropic esgotados.");
     const t = await res.text();
     console.error("Anthropic error", res.status, t);
     throw new Error("Falha na geração com IA (Anthropic)");
@@ -39,11 +40,9 @@ async function callAI(systemPrompt: string, userPrompt: string): Promise<string>
 }
 
 function extractHtml(text: string): string {
-  // strip markdown fences if present
   const fence = text.match(/```(?:html)?\s*([\s\S]*?)```/i);
   let html = fence ? fence[1] : text;
   html = html.trim();
-  // Ensure has <!doctype>
   if (!/<!doctype/i.test(html)) {
     if (!/<html/i.test(html)) {
       html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body>${html}</body></html>`;
@@ -64,6 +63,80 @@ const SYSTEM_GENERATE = `Você é um designer e copywriter sênior especializado
 Devolva APENAS o HTML, sem explicações, sem markdown.`;
 
 const SYSTEM_EDIT = `Você é um editor de HTML. Recebe um HTML completo e uma instrução. Devolve o HTML COMPLETO atualizado conforme a instrução, mantendo a estrutura, CSS embutido e responsividade. Devolva APENAS o HTML, sem explicações, sem markdown.`;
+
+type Step = "analyzing" | "designing" | "writing" | "finalizing";
+
+async function setJobStep(jobId: string, step: Step, progress: number) {
+  await supabaseAdmin
+    .from("site_generation_jobs")
+    .update({ status: "running", step, progress })
+    .eq("id", jobId);
+}
+
+async function runGenerationWorker(jobId: string, siteId: string, tenantId: string) {
+  try {
+    await setJobStep(jobId, "analyzing", 10);
+
+    const { data: site, error } = await supabaseAdmin
+      .from("sites")
+      .select("*")
+      .eq("id", siteId)
+      .eq("tenant_id", tenantId)
+      .single();
+    if (error || !site) throw new Error("Site não encontrado");
+
+    await setJobStep(jobId, "designing", 30);
+    // Pequeno delay para o usuário ver a transição entre etapas.
+    await new Promise((r) => setTimeout(r, 800));
+
+    await setJobStep(jobId, "writing", 55);
+
+    const userPrompt = `Negócio: ${site.business_name}
+Segmento: ${site.segment ?? "Geral"}
+Cidade: ${site.city ?? "Brasil"}
+Endereço: ${site.address ?? "—"}
+Telefone/WhatsApp: ${site.phone ?? site.whatsapp ?? "(não informado)"}
+
+Crie a landing page completa.`;
+
+    const raw = await callAI(SYSTEM_GENERATE, userPrompt);
+    const html = extractHtml(raw);
+
+    await setJobStep(jobId, "finalizing", 90);
+
+    const { error: upErr } = await supabaseAdmin
+      .from("sites")
+      .update({ html_content: html })
+      .eq("id", siteId)
+      .eq("tenant_id", tenantId);
+    if (upErr) throw new Error(upErr.message);
+
+    // Increment counter
+    const { data: prof } = await supabaseAdmin
+      .from("profiles")
+      .select("sites_created_this_month")
+      .eq("id", tenantId)
+      .single();
+    await supabaseAdmin
+      .from("profiles")
+      .update({ sites_created_this_month: (prof?.sites_created_this_month ?? 0) + 1 })
+      .eq("id", tenantId);
+
+    await supabaseAdmin
+      .from("site_generation_jobs")
+      .update({ status: "completed", step: "finalizing", progress: 100 })
+      .eq("id", jobId);
+  } catch (err) {
+    console.error("Generation worker failed:", err);
+    await supabaseAdmin
+      .from("site_generation_jobs")
+      .update({
+        status: "failed",
+        error_message: err instanceof Error ? err.message : "Falha desconhecida",
+      })
+      .eq("id", jobId);
+  }
+}
 
 export const generateSiteFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -87,38 +160,24 @@ export const generateSiteFn = createServerFn({ method: "POST" })
       throw new Error(`PLAN_LIMIT_SITES:${used}:${limits.sites}:${profile?.plan ?? "free"}`);
     }
 
-    const { data: site, error } = await supabase
-      .from("sites")
-      .select("*")
-      .eq("id", data.siteId)
-      .eq("tenant_id", userId)
+    // Cria o job e dispara o worker em background (sem await)
+    const { data: job, error: jobErr } = await supabase
+      .from("site_generation_jobs")
+      .insert({
+        site_id: data.siteId,
+        tenant_id: userId,
+        status: "pending",
+        step: "analyzing",
+        progress: 0,
+      })
+      .select("id")
       .single();
-    if (error || !site) throw new Error("Site não encontrado");
+    if (jobErr || !job) throw new Error(jobErr?.message ?? "Falha ao criar job");
 
-    const userPrompt = `Negócio: ${site.business_name}
-Segmento: ${site.segment ?? "Geral"}
-Cidade: ${site.city ?? "Brasil"}
-Endereço: ${site.address ?? "—"}
-Telefone/WhatsApp: ${site.phone ?? site.whatsapp ?? "(não informado)"}
+    // Dispara em background — não bloqueia a resposta nem estoura o timeout do worker.
+    void runGenerationWorker(job.id, data.siteId, userId);
 
-Crie a landing page completa.`;
-
-    const raw = await callAI(SYSTEM_GENERATE, userPrompt);
-    const html = extractHtml(raw);
-
-    const { error: upErr } = await supabase
-      .from("sites")
-      .update({ html_content: html })
-      .eq("id", data.siteId)
-      .eq("tenant_id", userId);
-    if (upErr) throw new Error(upErr.message);
-
-    await supabase
-      .from("profiles")
-      .update({ sites_created_this_month: used + 1 })
-      .eq("id", userId);
-
-    return { ok: true };
+    return { jobId: job.id };
   });
 
 export const editSiteFn = createServerFn({ method: "POST" })
