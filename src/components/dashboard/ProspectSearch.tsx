@@ -96,10 +96,9 @@ export function ProspectSearch({ compact = false }: { compact?: boolean }) {
         .select("id")
         .single();
       if (error || !site) throw new Error(error?.message);
+      // Dispara o job em background e redireciona para a tela de progresso.
       await generate({ data: { siteId: site.id } });
-      invalidateProfile();
-      toast.success("Site gerado!");
-      navigate({ to: "/sites/$id", params: { id: site.id } });
+      navigate({ to: "/sites/$id/gerando", params: { id: site.id } });
     } catch (err) {
       if (!handlePlanError(err)) toast.error(err instanceof Error ? err.message : "Falha");
     } finally {
