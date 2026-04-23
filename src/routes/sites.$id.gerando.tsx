@@ -161,11 +161,18 @@ function GeneratingPage() {
   const currentStepIdx = job ? STEP_ORDER[job.step] : 0;
   const failed = job?.status === "failed";
   const completed = job?.status === "completed";
+  const stalledMs = now - lastJobUpdateAt;
+  const totalMs = now - jobStartedAtRef.current;
+  const isWritingHeartbeat = !completed && !failed && job?.step === "writing" && stalledMs > 15000;
+  const showWatchdog = !completed && !failed && totalMs > 180000;
+  const baseCaption = STEPS[currentStepIdx]?.caption ?? "Iniciando…";
   const currentCaption = completed
     ? "Site pronto!"
     : failed
       ? "Falha ao gerar"
-      : (STEPS[currentStepIdx]?.caption ?? "Iniciando…");
+      : isWritingHeartbeat
+        ? "Escrevendo os textos… (gerando com Claude Sonnet, isso pode levar até 1 min)"
+        : baseCaption;
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-6">
