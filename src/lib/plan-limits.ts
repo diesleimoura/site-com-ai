@@ -1,9 +1,9 @@
-export type PlanKey = "free" | "pro" | "agencia";
+export type PlanKey = "free" | "pro" | "agency";
 
 export const PLAN_LIMITS: Record<PlanKey, { sites: number; searches: number }> = {
   free: { sites: 2, searches: 1 },
   pro: { sites: 80, searches: 10 },
-  agencia: { sites: Infinity, searches: Infinity },
+  agency: { sites: Infinity, searches: Infinity },
 };
 
 export function getPlanLimits(plan: string | null | undefined) {
@@ -12,6 +12,6 @@ export function getPlanLimits(plan: string | null | undefined) {
 }
 
 export function planLabel(plan: string | null | undefined) {
-  const map: Record<string, string> = { free: "Grátis", pro: "Pro", agencia: "Agência" };
+  const map: Record<string, string> = { free: "Grátis", pro: "Pro", agency: "Agência" };
   return map[plan ?? "free"] ?? "Grátis";
 }
