@@ -25,6 +25,7 @@ import { Route as DashboardContaRouteImport } from './routes/dashboard.conta'
 import { Route as DashboardCobrancaRouteImport } from './routes/dashboard.cobranca'
 import { Route as DashboardCarteiraRouteImport } from './routes/dashboard.carteira'
 import { Route as DashboardAfiliadosRouteImport } from './routes/dashboard.afiliados'
+import { Route as SitesIdGerandoRouteImport } from './routes/sites.$id.gerando'
 
 const TurboRoute = TurboRouteImport.update({
   id: '/turbo',
@@ -106,6 +107,11 @@ const DashboardAfiliadosRoute = DashboardAfiliadosRouteImport.update({
   path: '/afiliados',
   getParentRoute: () => DashboardRoute,
 } as any)
+const SitesIdGerandoRoute = SitesIdGerandoRouteImport.update({
+  id: '/gerando',
+  path: '/gerando',
+  getParentRoute: () => SitesIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -123,7 +129,8 @@ export interface FileRoutesByFullPath {
   '/dashboard/sites': typeof DashboardSitesRoute
   '/dashboard/vendas': typeof DashboardVendasRoute
   '/proposta/$token': typeof PropostaTokenRoute
-  '/sites/$id': typeof SitesIdRoute
+  '/sites/$id': typeof SitesIdRouteWithChildren
+  '/sites/$id/gerando': typeof SitesIdGerandoRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -141,7 +148,8 @@ export interface FileRoutesByTo {
   '/dashboard/sites': typeof DashboardSitesRoute
   '/dashboard/vendas': typeof DashboardVendasRoute
   '/proposta/$token': typeof PropostaTokenRoute
-  '/sites/$id': typeof SitesIdRoute
+  '/sites/$id': typeof SitesIdRouteWithChildren
+  '/sites/$id/gerando': typeof SitesIdGerandoRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -160,7 +168,8 @@ export interface FileRoutesById {
   '/dashboard/sites': typeof DashboardSitesRoute
   '/dashboard/vendas': typeof DashboardVendasRoute
   '/proposta/$token': typeof PropostaTokenRoute
-  '/sites/$id': typeof SitesIdRoute
+  '/sites/$id': typeof SitesIdRouteWithChildren
+  '/sites/$id/gerando': typeof SitesIdGerandoRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -181,6 +190,7 @@ export interface FileRouteTypes {
     | '/dashboard/vendas'
     | '/proposta/$token'
     | '/sites/$id'
+    | '/sites/$id/gerando'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -199,6 +209,7 @@ export interface FileRouteTypes {
     | '/dashboard/vendas'
     | '/proposta/$token'
     | '/sites/$id'
+    | '/sites/$id/gerando'
   id:
     | '__root__'
     | '/'
@@ -217,6 +228,7 @@ export interface FileRouteTypes {
     | '/dashboard/vendas'
     | '/proposta/$token'
     | '/sites/$id'
+    | '/sites/$id/gerando'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -226,7 +238,7 @@ export interface RootRouteChildren {
   PlanosRoute: typeof PlanosRoute
   TurboRoute: typeof TurboRoute
   PropostaTokenRoute: typeof PropostaTokenRoute
-  SitesIdRoute: typeof SitesIdRoute
+  SitesIdRoute: typeof SitesIdRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -343,6 +355,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardAfiliadosRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/sites/$id/gerando': {
+      id: '/sites/$id/gerando'
+      path: '/gerando'
+      fullPath: '/sites/$id/gerando'
+      preLoaderRoute: typeof SitesIdGerandoRouteImport
+      parentRoute: typeof SitesIdRoute
+    }
   }
 }
 
@@ -374,6 +393,17 @@ const DashboardRouteWithChildren = DashboardRoute._addFileChildren(
   DashboardRouteChildren,
 )
 
+interface SitesIdRouteChildren {
+  SitesIdGerandoRoute: typeof SitesIdGerandoRoute
+}
+
+const SitesIdRouteChildren: SitesIdRouteChildren = {
+  SitesIdGerandoRoute: SitesIdGerandoRoute,
+}
+
+const SitesIdRouteWithChildren =
+  SitesIdRoute._addFileChildren(SitesIdRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
@@ -381,8 +411,17 @@ const rootRouteChildren: RootRouteChildren = {
   PlanosRoute: PlanosRoute,
   TurboRoute: TurboRoute,
   PropostaTokenRoute: PropostaTokenRoute,
-  SitesIdRoute: SitesIdRoute,
+  SitesIdRoute: SitesIdRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
