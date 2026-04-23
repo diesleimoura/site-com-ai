@@ -31,7 +31,8 @@ function SitePreviewPage() {
 
   const { data: site, isLoading } = useQuery({
     queryKey: ["site", id],
-    staleTime: 60_000,
+    staleTime: 0,
+    refetchOnMount: "always",
     queryFn: async () => {
       const { data, error } = await supabase.from("sites").select("*").eq("id", id).single();
       if (error) throw error;
