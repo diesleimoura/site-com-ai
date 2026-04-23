@@ -4,7 +4,8 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { getPlanLimits } from "@/lib/plan-limits";
 
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
-const ANTHROPIC_MODEL = "claude-sonnet-4-5-20250929";
+// Haiku é ~5x mais rápido que Sonnet — evita upstream timeout do worker.
+const ANTHROPIC_MODEL = "claude-haiku-4-5";
 
 async function callAI(systemPrompt: string, userPrompt: string): Promise<string> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -18,7 +19,7 @@ async function callAI(systemPrompt: string, userPrompt: string): Promise<string>
     },
     body: JSON.stringify({
       model: ANTHROPIC_MODEL,
-      max_tokens: 8000,
+      max_tokens: 4096,
       system: systemPrompt,
       messages: [{ role: "user", content: userPrompt }],
     }),
