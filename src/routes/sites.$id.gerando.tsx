@@ -269,6 +269,21 @@ function GeneratingPage() {
           </div>
         )}
 
+        {showWatchdog && !failed && (
+          <div className="mt-6 rounded-lg border border-border bg-muted/40 p-4 space-y-3">
+            <p className="text-sm text-muted-foreground text-center">
+              A geração está demorando mais que o normal. Você pode aguardar ou tentar novamente.
+            </p>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => navigate({ to: "/dashboard/prospectar" })}
+            >
+              Tentar novamente
+            </Button>
+          </div>
+        )}
+
         <p className="mt-6 text-center text-xs text-muted-foreground">
           A geração de qualidade leva cerca de 30-60 segundos. Pode deixar a aba aberta.
         </p>
