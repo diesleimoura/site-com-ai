@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useInvalidateProfile } from "@/lib/use-profile";
 import { Search, Palette, FileText, CheckCircle2, Loader2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 
 export const Route = createFileRoute("/sites/$id/gerando")({
   component: GeneratingPage,
@@ -19,11 +20,11 @@ type JobRow = {
   error_message: string | null;
 };
 
-const STEPS: { key: Step; label: string; Icon: React.ComponentType<{ className?: string }> }[] = [
-  { key: "analyzing", label: "Analisando o negócio", Icon: Search },
-  { key: "designing", label: "Criando o design", Icon: Palette },
-  { key: "writing", label: "Escrevendo os textos", Icon: FileText },
-  { key: "finalizing", label: "Finalizando o site", Icon: CheckCircle2 },
+const STEPS: { key: Step; label: string; caption: string; Icon: React.ComponentType<{ className?: string }> }[] = [
+  { key: "analyzing", label: "Analisando o negócio", caption: "Analisando o negócio…", Icon: Search },
+  { key: "designing", label: "Criando o design", caption: "Criando o design…", Icon: Palette },
+  { key: "writing", label: "Escrevendo os textos", caption: "Escrevendo os textos…", Icon: FileText },
+  { key: "finalizing", label: "Finalizando o site", caption: "Finalizando o site…", Icon: CheckCircle2 },
 ];
 
 const STEP_ORDER: Record<Step, number> = {
@@ -33,6 +34,16 @@ const STEP_ORDER: Record<Step, number> = {
   finalizing: 3,
 };
 
+// Server-side checkpoints from runGenerationWorker
+const CHECKPOINTS = [10, 30, 55, 90, 100];
+
+function nextCheckpoint(current: number): number {
+  for (const c of CHECKPOINTS) {
+    if (c > current) return c;
+  }
+  return 100;
+}
+
 function GeneratingPage() {
   const { id: siteId } = Route.useParams();
   const navigate = useNavigate();
@@ -40,6 +51,7 @@ function GeneratingPage() {
   const invalidateProfile = useInvalidateProfile();
   const [job, setJob] = React.useState<JobRow | null>(null);
   const [businessName, setBusinessName] = React.useState<string>("");
+  const [displayProgress, setDisplayProgress] = React.useState(0);
 
   React.useEffect(() => {
     if (!user) return;
@@ -75,7 +87,6 @@ function GeneratingPage() {
       )
       .subscribe();
 
-    // Fallback polling a cada 3s caso o realtime falhe
     const poll = setInterval(async () => {
       const { data } = await supabase
         .from("site_generation_jobs")
@@ -94,6 +105,26 @@ function GeneratingPage() {
     };
   }, [siteId, user]);
 
+  // Snap displayed progress to real progress whenever the job updates
+  React.useEffect(() => {
+    if (!job) return;
+    setDisplayProgress((prev) => Math.max(prev, job.progress));
+    if (job.status === "completed") setDisplayProgress(100);
+  }, [job]);
+
+  // Smooth interpolation between server checkpoints
+  React.useEffect(() => {
+    if (!job || job.status === "completed" || job.status === "failed") return;
+    const interval = setInterval(() => {
+      setDisplayProgress((prev) => {
+        const target = nextCheckpoint(job.progress) - 1;
+        if (prev >= target) return prev;
+        return Math.min(prev + 1, target);
+      });
+    }, 600);
+    return () => clearInterval(interval);
+  }, [job]);
+
   React.useEffect(() => {
     if (job?.status === "completed") {
       invalidateProfile();
@@ -105,13 +136,18 @@ function GeneratingPage() {
   }, [job?.status, navigate, siteId, invalidateProfile]);
 
   const currentStepIdx = job ? STEP_ORDER[job.step] : 0;
-  const progress = job?.progress ?? 0;
   const failed = job?.status === "failed";
+  const completed = job?.status === "completed";
+  const currentCaption = completed
+    ? "Site pronto!"
+    : failed
+      ? "Falha ao gerar"
+      : (STEPS[currentStepIdx]?.caption ?? "Iniciando…");
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-6">
       <div className="w-full max-w-md">
-        <div className="flex flex-col items-center text-center mb-8">
+        <div className="flex flex-col items-center text-center mb-6">
           <div className="relative h-24 w-24 mb-6">
             <svg className="h-24 w-24 -rotate-90" viewBox="0 0 100 100">
               <circle
@@ -127,29 +163,43 @@ function GeneratingPage() {
                 strokeWidth="6"
                 strokeLinecap="round"
                 strokeDasharray={2 * Math.PI * 44}
-                strokeDashoffset={2 * Math.PI * 44 * (1 - progress / 100)}
+                strokeDashoffset={2 * Math.PI * 44 * (1 - displayProgress / 100)}
                 style={{ transition: "stroke-dashoffset 0.6s ease" }}
               />
             </svg>
-            {!failed && (
+            {!failed && !completed && (
               <Loader2 className="absolute inset-0 m-auto h-6 w-6 animate-spin text-primary" />
+            )}
+            {completed && (
+              <CheckCircle2 className="absolute inset-0 m-auto h-8 w-8 text-success" />
             )}
             {failed && (
               <AlertTriangle className="absolute inset-0 m-auto h-8 w-8 text-destructive" />
             )}
           </div>
           <h1 className="text-2xl font-bold tracking-tight">
-            {failed ? "Falha ao gerar" : job?.status === "completed" ? "Site pronto!" : "Gerando site com IA…"}
+            {failed ? "Falha ao gerar" : completed ? "Site pronto!" : "Gerando site com IA…"}
           </h1>
           {businessName && (
             <p className="mt-1 text-sm text-muted-foreground">{businessName}</p>
           )}
         </div>
 
+        {/* Live progress bar */}
+        {!failed && (
+          <div className="mb-6 space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">{currentCaption}</span>
+              <span className="font-medium tabular-nums">{Math.round(displayProgress)}%</span>
+            </div>
+            <Progress value={displayProgress} className="h-2" />
+          </div>
+        )}
+
         <div className="space-y-2">
           {STEPS.map(({ key, label, Icon }, idx) => {
-            const isDone = idx < currentStepIdx || job?.status === "completed";
-            const isActive = idx === currentStepIdx && job?.status !== "completed" && !failed;
+            const isDone = idx < currentStepIdx || completed;
+            const isActive = idx === currentStepIdx && !completed && !failed;
             const isPending = idx > currentStepIdx && !failed;
             return (
               <div
