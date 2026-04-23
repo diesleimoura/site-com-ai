@@ -52,10 +52,19 @@ function GeneratingPage() {
   const [job, setJob] = React.useState<JobRow | null>(null);
   const [businessName, setBusinessName] = React.useState<string>("");
   const [displayProgress, setDisplayProgress] = React.useState(0);
+  const [lastJobUpdateAt, setLastJobUpdateAt] = React.useState<number>(Date.now());
+  const [now, setNow] = React.useState<number>(Date.now());
+  const jobStartedAtRef = React.useRef<number>(Date.now());
 
   React.useEffect(() => {
     if (!user) return;
     let cancelled = false;
+
+    const applyJob = (row: JobRow | null) => {
+      if (!row) return;
+      setJob(row);
+      setLastJobUpdateAt(Date.now());
+    };
 
     (async () => {
       const { data: site } = await supabase
@@ -72,7 +81,7 @@ function GeneratingPage() {
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
-      if (!cancelled && data) setJob(data as JobRow);
+      if (!cancelled && data) applyJob(data as JobRow);
     })();
 
     const channel = supabase
@@ -82,10 +91,12 @@ function GeneratingPage() {
         { event: "*", schema: "public", table: "site_generation_jobs", filter: `site_id=eq.${siteId}` },
         (payload) => {
           const row = payload.new as JobRow;
-          if (row) setJob(row);
+          if (row) applyJob(row);
         },
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log(`[gerando] realtime channel status:`, status);
+      });
 
     const poll = setInterval(async () => {
       const { data } = await supabase
@@ -95,8 +106,8 @@ function GeneratingPage() {
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
-      if (!cancelled && data) setJob(data as JobRow);
-    }, 3000);
+      if (!cancelled && data) applyJob(data as JobRow);
+    }, 2000);
 
     return () => {
       cancelled = true;
@@ -105,6 +116,12 @@ function GeneratingPage() {
     };
   }, [siteId, user]);
 
+  // Tick clock for heartbeat / watchdog UI
+  React.useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
   // Snap displayed progress to real progress whenever the job updates
   React.useEffect(() => {
     if (!job) return;
@@ -112,16 +129,22 @@ function GeneratingPage() {
     if (job.status === "completed") setDisplayProgress(100);
   }, [job]);
 
-  // Smooth interpolation between server checkpoints
+  // Continuous interpolation that never stalls — eases toward next checkpoint
+  // with a guaranteed minimum step so the bar always moves during long phases.
   React.useEffect(() => {
     if (!job || job.status === "completed" || job.status === "failed") return;
+    const TICK_MS = 400;
+    const MIN_STEP = 0.15;
+    const EASE = 0.04;
     const interval = setInterval(() => {
       setDisplayProgress((prev) => {
-        const target = nextCheckpoint(job.progress) - 1;
-        if (prev >= target) return prev;
-        return Math.min(prev + 1, target);
+        const target = nextCheckpoint(job.progress);
+        const ceiling = target - 0.05;
+        if (prev >= ceiling) return prev;
+        const delta = Math.max(MIN_STEP, (target - prev) * EASE);
+        return Math.min(prev + delta, ceiling);
       });
-    }, 600);
+    }, TICK_MS);
     return () => clearInterval(interval);
   }, [job]);
 
