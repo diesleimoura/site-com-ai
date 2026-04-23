@@ -52,10 +52,19 @@ function GeneratingPage() {
   const [job, setJob] = React.useState<JobRow | null>(null);
   const [businessName, setBusinessName] = React.useState<string>("");
   const [displayProgress, setDisplayProgress] = React.useState(0);
+  const [lastJobUpdateAt, setLastJobUpdateAt] = React.useState<number>(Date.now());
+  const [now, setNow] = React.useState<number>(Date.now());
+  const jobStartedAtRef = React.useRef<number>(Date.now());
 
   React.useEffect(() => {
     if (!user) return;
     let cancelled = false;
+
+    const applyJob = (row: JobRow | null) => {
+      if (!row) return;
+      setJob(row);
+      setLastJobUpdateAt(Date.now());
+    };
 
     (async () => {
       const { data: site } = await supabase
@@ -72,7 +81,7 @@ function GeneratingPage() {
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
-      if (!cancelled && data) setJob(data as JobRow);
+      if (!cancelled && data) applyJob(data as JobRow);
     })();
 
     const channel = supabase
@@ -82,10 +91,12 @@ function GeneratingPage() {
         { event: "*", schema: "public", table: "site_generation_jobs", filter: `site_id=eq.${siteId}` },
         (payload) => {
           const row = payload.new as JobRow;
-          if (row) setJob(row);
+          if (row) applyJob(row);
         },
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log(`[gerando] realtime channel status:`, status);
+      });
 
     const poll = setInterval(async () => {
       const { data } = await supabase
@@ -95,8 +106,8 @@ function GeneratingPage() {
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
-      if (!cancelled && data) setJob(data as JobRow);
-    }, 3000);
+      if (!cancelled && data) applyJob(data as JobRow);
+    }, 2000);
 
     return () => {
       cancelled = true;
@@ -105,6 +116,12 @@ function GeneratingPage() {
     };
   }, [siteId, user]);
 
+  // Tick clock for heartbeat / watchdog UI
+  React.useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
   // Snap displayed progress to real progress whenever the job updates
   React.useEffect(() => {
     if (!job) return;
@@ -112,16 +129,22 @@ function GeneratingPage() {
     if (job.status === "completed") setDisplayProgress(100);
   }, [job]);
 
-  // Smooth interpolation between server checkpoints
+  // Continuous interpolation that never stalls — eases toward next checkpoint
+  // with a guaranteed minimum step so the bar always moves during long phases.
   React.useEffect(() => {
     if (!job || job.status === "completed" || job.status === "failed") return;
+    const TICK_MS = 400;
+    const MIN_STEP = 0.15;
+    const EASE = 0.04;
     const interval = setInterval(() => {
       setDisplayProgress((prev) => {
-        const target = nextCheckpoint(job.progress) - 1;
-        if (prev >= target) return prev;
-        return Math.min(prev + 1, target);
+        const target = nextCheckpoint(job.progress);
+        const ceiling = target - 0.05;
+        if (prev >= ceiling) return prev;
+        const delta = Math.max(MIN_STEP, (target - prev) * EASE);
+        return Math.min(prev + delta, ceiling);
       });
-    }, 600);
+    }, TICK_MS);
     return () => clearInterval(interval);
   }, [job]);
 
@@ -138,11 +161,18 @@ function GeneratingPage() {
   const currentStepIdx = job ? STEP_ORDER[job.step] : 0;
   const failed = job?.status === "failed";
   const completed = job?.status === "completed";
+  const stalledMs = now - lastJobUpdateAt;
+  const totalMs = now - jobStartedAtRef.current;
+  const isWritingHeartbeat = !completed && !failed && job?.step === "writing" && stalledMs > 15000;
+  const showWatchdog = !completed && !failed && totalMs > 180000;
+  const baseCaption = STEPS[currentStepIdx]?.caption ?? "Iniciando…";
   const currentCaption = completed
     ? "Site pronto!"
     : failed
       ? "Falha ao gerar"
-      : (STEPS[currentStepIdx]?.caption ?? "Iniciando…");
+      : isWritingHeartbeat
+        ? "Escrevendo os textos… (gerando com Claude Sonnet, isso pode levar até 1 min)"
+        : baseCaption;
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-6">
@@ -235,6 +265,21 @@ function GeneratingPage() {
             </p>
             <Button className="w-full" onClick={() => navigate({ to: "/dashboard/prospectar" })}>
               Voltar
+            </Button>
+          </div>
+        )}
+
+        {showWatchdog && !failed && (
+          <div className="mt-6 rounded-lg border border-border bg-muted/40 p-4 space-y-3">
+            <p className="text-sm text-muted-foreground text-center">
+              A geração está demorando mais que o normal. Você pode aguardar ou tentar novamente.
+            </p>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => navigate({ to: "/dashboard/prospectar" })}
+            >
+              Tentar novamente
             </Button>
           </div>
         )}
