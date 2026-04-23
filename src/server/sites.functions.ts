@@ -19,7 +19,7 @@ async function callAI(systemPrompt: string, userPrompt: string): Promise<string>
     },
     body: JSON.stringify({
       model: ANTHROPIC_MODEL,
-      max_tokens: 8000,
+      max_tokens: 4096,
       system: systemPrompt,
       messages: [{ role: "user", content: userPrompt }],
     }),
