@@ -59,6 +59,19 @@ type SerpLocalResult = {
   links?: { website?: string };
 };
 
+// Social/messaging links should NOT count as a real website.
+const NON_SITE_HOST_PATTERNS = [
+  "instagram.", "wa.me", "whatsapp.", "api.whatsapp", "facebook.", "fb.com",
+  "linktr.ee", "linkr.bio", "beacons.ai", "tiktok.", "youtube.", "youtu.be",
+  "twitter.", "x.com/", "t.me/", "telegram.", "linkedin.", "threads.net",
+  "pinterest.", "bit.ly", "goo.gl",
+];
+function isRealWebsite(url: string): boolean {
+  if (!url) return false;
+  const lower = url.toLowerCase();
+  return !NON_SITE_HOST_PATTERNS.some((p) => lower.includes(p));
+}
+
 async function serpApiSearch(
   segment: string,
   city: string,
@@ -91,7 +104,7 @@ async function serpApiSearch(
       address: r.address ?? "",
       rating: typeof r.rating === "number" ? r.rating : 0,
       total_ratings: typeof r.reviews === "number" ? r.reviews : 0,
-      has_website: Boolean(website),
+      has_website: isRealWebsite(website),
       phone: r.phone ?? "",
     };
   });
