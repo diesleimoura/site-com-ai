@@ -91,7 +91,7 @@ async function serpApiSearch(
       address: r.address ?? "",
       rating: typeof r.rating === "number" ? r.rating : 0,
       total_ratings: typeof r.reviews === "number" ? r.reviews : 0,
-      has_website: Boolean(website),
+      has_website: isRealWebsite(website),
       phone: r.phone ?? "",
     };
   });
