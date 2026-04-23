@@ -26,6 +26,7 @@ export const Route = createFileRoute("/sites/$id")({
 function SitePreviewPage() {
   const { id } = Route.useParams();
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [viewport, setViewport] = React.useState<Viewport>("desktop");
   const [proposalOpen, setProposalOpen] = React.useState(false);
 
@@ -39,6 +40,28 @@ function SitePreviewPage() {
       return data;
     },
   });
+
+  // Se ainda não há HTML, verifica se existe um job em andamento e redireciona para a tela de progresso.
+  React.useEffect(() => {
+    if (!site || site.html_content) return;
+    let cancelled = false;
+    (async () => {
+      const { data: job } = await supabase
+        .from("site_generation_jobs")
+        .select("status")
+        .eq("site_id", id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (cancelled) return;
+      if (job && (job.status === "pending" || job.status === "running")) {
+        navigate({ to: "/sites/$id/gerando", params: { id } });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [site, id, navigate]);
 
   if (isLoading) {
     return <div className="grid min-h-screen place-items-center text-muted-foreground">Carregando...</div>;
